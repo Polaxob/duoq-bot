@@ -46,19 +46,19 @@ GAMES = {
             "Достойный мастер страж", "Орёл-легенда", "Мастер орлов-легенд",
             "Верховный мастер", "Глобальная элита",
         ],
-        "roles": ["Рифлер", "Снайпер (AWP)", "Капитан (IGL)", "Поддержка", "Прорыв (Entry)"],
+        "roles": ["Стрелок", "Снайпер", "Капитан", "Поддержка", "Прорывной"],
         "platforms": [
             {"name": "FaceIt", "options": ["Уровень 1", "Уровень 2", "Уровень 3", "Уровень 4", "Уровень 5",
                                             "Уровень 6", "Уровень 7", "Уровень 8", "Уровень 9", "Уровень 10"]},
-            {"name": "Premier (рейтинг)", "options": []},  # свободный ввод
+            {"name": "Премьер (рейтинг)", "options": []},
         ],
     },
     "dota2": {
         "name": "Dota 2",
         "ranks": ["Герольд", "Страж", "Крестоносец", "Архонт", "Легенда", "Древний", "Божественный", "Бессмертный"],
-        "roles": ["Керри", "Мид", "Оффлейн", "Мягкая поддержка", "Твёрдая поддержка"],
+        "roles": ["Керри", "Мидлер", "Оффлейнер", "Мягкая поддержка", "Твёрдая поддержка"],
         "platforms": [
-            {"name": "DotaBuff MMR", "options": []},  # свободный ввод
+            {"name": "DotaBuff (MMR)", "options": []},
         ],
     },
     "valorant": {
@@ -66,7 +66,7 @@ GAMES = {
         "ranks": ["Железо", "Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Восхождение", "Бессмертный", "Радиант"],
         "roles": ["Дуэлянт", "Страж", "Контролёр", "Инициатор"],
         "platforms": [
-            {"name": "Tracker Network", "options": []},
+            {"name": "Трекер статистики", "options": []},
         ],
     },
     "fortnite": {
@@ -80,7 +80,7 @@ GAMES = {
         "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Мастер", "Хищник"],
         "roles": ["Танк", "Урон", "Поддержка"],
         "platforms": [
-            {"name": "Apex Tracker", "options": []},
+            {"name": "Трекер статистики", "options": []},
         ],
     },
     "pubg": {
@@ -92,13 +92,13 @@ GAMES = {
     "rust": {
         "name": "Rust",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
-        "roles": ["PvP", "PvE", "Строитель", "Рейдер"],
+        "roles": ["Рейды и PvP", "Строительство", "Сбор ресурсов", "Ролеплей"],
         "platforms": [],
     },
     "minecraft": {
         "name": "Minecraft",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
-        "roles": ["SMP", "Креатив", "Модded", "PvP", "Спидран"],
+        "roles": ["Выживание", "Креатив", "Моды", "Арена", "Спидран"],
         "platforms": [
             {"name": "Hypixel", "options": ["Новичок", "Средний", "Опытный", "Профи"]},
         ],
@@ -106,27 +106,27 @@ GAMES = {
     "gtav": {
         "name": "GTA V",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
-        "roles": ["Хейсты", "РП", "PvP", "Кэш-хант"],
+        "roles": ["Ограбления", "Ролеплей", "Бойцовка", "Фарм денег"],
         "platforms": [],
     },
     "league": {
         "name": "League of Legends",
         "ranks": ["Железо", "Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Мастер", "Грандмастер", "Челленджер"],
-        "roles": ["Топ", "Джангл", "Мид", "АДК", "Саппорт"],
+        "roles": ["Топ", "Лес", "Мид", "Стрелок", "Поддержка"],
         "platforms": [
             {"name": "op.gg", "options": []},
         ],
     },
     "rl": {
         "name": "Rocket League",
-        "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Чемпион", "Гранд-чемпион", "Суперз脎 Стён"],
-        "roles": ["2v2", "3v3", "1v1"],
+        "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Чемпион", "Гранд-чемпион", "Суперзвуковые легенды"],
+        "roles": ["На двоих", "На троих", "Один на один"],
         "platforms": [],
     },
     "dayz": {
         "name": "DayZ",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
-        "roles": ["PvP", "PvE", "Ролеплей"],
+        "roles": ["Выживание и PvP", "Кооп PVE", "Ролеплей"],
         "platforms": [],
     },
 }
@@ -309,10 +309,11 @@ async def form_games(message: Message, state: FSMContext):
         await state.update_data(current_detail_field="role", current_game_key=first_game)
         return
 
-    # Toggle game selection
+    # Toggle game selection — strip "✅ " prefix if present
+    clean_text = text.lstrip("✅ ")
     game_key = None
     for k, v in GAMES.items():
-        if text == f"🎮 {v['name']}":
+        if clean_text == f"🎮 {v['name']}":
             game_key = k
             break
 
@@ -568,12 +569,13 @@ async def form_play_style(message: Message, state: FSMContext):
         )
         return
 
-    # Toggle style
+    # Toggle style — strip "✅ " prefix if present
+    clean_text = text.lstrip("✅ ")
     styles = data.get("selected_styles", [])
-    if text in styles:
-        styles.remove(text)
+    if clean_text in styles:
+        styles.remove(clean_text)
     elif len(styles) < 3:
-        styles.append(text)
+        styles.append(clean_text)
     else:
         await message.answer("❌ Максимум 3 стиля!")
         return
