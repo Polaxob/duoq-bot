@@ -27,6 +27,7 @@ import database as db
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
@@ -39,6 +40,7 @@ logging.basicConfig(level=logging.INFO)
 GAMES = {
     "cs2": {
         "name": "CS2",
+        "icon": "🔫",
         "ranks": [
             "Серебро I", "Серебро II", "Серебро III", "Серебро IV", "Серебряная звезда",
             "Серебряная звезда I", "Серебряная звезда II", "Серебряная звезда III",
@@ -56,6 +58,7 @@ GAMES = {
     },
     "dota2": {
         "name": "Dota 2",
+        "icon": "⚔️",
         "ranks": ["Герольд", "Страж", "Крестоносец", "Архонт", "Легенда", "Древний", "Божественный", "Бессмертный"],
         "roles": ["Керри", "Мидлер", "Оффлейнер", "Мягкая поддержка", "Твёрдая поддержка"],
         "platforms": [
@@ -64,6 +67,7 @@ GAMES = {
     },
     "valorant": {
         "name": "Valorant",
+        "icon": "🛡️",
         "ranks": ["Железо", "Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Восхождение", "Бессмертный", "Радиант"],
         "roles": ["Дуэлянт", "Страж", "Контролёр", "Инициатор"],
         "platforms": [
@@ -72,12 +76,14 @@ GAMES = {
     },
     "fortnite": {
         "name": "Fortnite",
+        "icon": "🏗️",
         "ranks": ["Бот", "Новичок", "Средний", "Выше среднего", "Продвинутый", "Эксперт"],
         "roles": ["Строитель", "Без строительства", "Оба режима"],
         "platforms": [],
     },
     "apex": {
         "name": "Apex Legends",
+        "icon": "🔥",
         "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Мастер", "Хищник"],
         "roles": ["Танк", "Урон", "Поддержка"],
         "platforms": [
@@ -86,18 +92,21 @@ GAMES = {
     },
     "pubg": {
         "name": "PUBG",
+        "icon": "🪖",
         "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Мастер"],
         "roles": ["Агрессивный", "Пассивный", "Универсал"],
         "platforms": [],
     },
     "rust": {
         "name": "Rust",
+        "icon": "🔧",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
         "roles": ["Рейды и PvP", "Строительство", "Сбор ресурсов", "Ролеплей"],
         "platforms": [],
     },
     "minecraft": {
         "name": "Minecraft",
+        "icon": "⛏️",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
         "roles": ["Выживание", "Креатив", "Моды", "Арена", "Спидран"],
         "platforms": [
@@ -106,12 +115,14 @@ GAMES = {
     },
     "gtav": {
         "name": "GTA V",
+        "icon": "🚗",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
         "roles": ["Ограбления", "Ролеплей", "Бойцовка", "Фарм денег"],
         "platforms": [],
     },
     "league": {
         "name": "League of Legends",
+        "icon": "👑",
         "ranks": ["Железо", "Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Мастер", "Грандмастер", "Челленджер"],
         "roles": ["Топ", "Лес", "Мид", "Стрелок", "Поддержка"],
         "platforms": [
@@ -120,12 +131,14 @@ GAMES = {
     },
     "rl": {
         "name": "Rocket League",
+        "icon": "🏎️",
         "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Чемпион", "Гранд-чемпион", "Суперзвуковые легенды"],
         "roles": ["На двоих", "На троих", "Один на один"],
         "platforms": [],
     },
     "dayz": {
         "name": "DayZ",
+        "icon": "🧟",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
         "roles": ["Выживание и PvP", "Кооп PVE", "Ролеплей"],
         "platforms": [],
@@ -140,7 +153,7 @@ PLAY_STYLES = ["🔥 Агрессивно", "🧊 Спокойно", "🧠 Ст�
                "😤 Соло", "🤝 Командно"]
 MIC_OPTIONS = {"mic": "🎤 Микро есть", "listen": "🎧 Только слушаю", "no_mic": "🔇 Нет микрофона"}
 
-# ── Игро-специфичные вопросы (шаг 8/9) ──
+# ── Игро-специфичные вопросы (шаг 9/10) ──
 
 GAME_RATING_QUESTIONS = {
     "cs2": [
@@ -204,7 +217,7 @@ async def _show_rating_question(message, queue, q_idx):
 
     await message.answer(
         f"🎮 <b>{game_name}</b>\n\n"
-        f"🏆 <b>Шаг 8/9</b> · {q['text']}",
+        f"🏆 <b>Шаг 9/10</b> · {q['text']}",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
     )
@@ -213,6 +226,7 @@ async def _show_rating_question(message, queue, q_idx):
 
 class Form(StatesGroup):
     nickname = State()
+    name = State()
     age = State()
     gender = State()
     games = State()
@@ -224,6 +238,8 @@ class Form(StatesGroup):
     bio = State()
     # Поиск
     search_game = State()
+    # Поддержка
+    support = State()
     # Настройки
     settings = State()
 
@@ -235,6 +251,7 @@ def main_kb():
         keyboard=[
             [KeyboardButton(text="📋 Создать анкету"), KeyboardButton(text="🔍 Найти тиммейтов")],
             [KeyboardButton(text="👤 Мой профиль"), KeyboardButton(text="⚙️ Настройки")],
+            [KeyboardButton(text="💬 Поддержка")],
         ],
         resize_keyboard=True,
     )
@@ -273,8 +290,8 @@ async def start_form(message: Message, state: FSMContext):
     await state.set_state(Form.nickname)
     await message.answer(
         "📝 <b>Создание анкеты</b>\n\n"
-        "<b>Шаг 1/9</b> · Как тебя называют?\n"
-        "Какое у тебя имя + Никнейм (2–30 символов):",
+        "<b>Шаг 1/10</b> · Как тебя называют?\n"
+        "Никнейм (2–30 символов):",
         parse_mode="HTML",
         reply_markup=back_kb(),
     )
@@ -290,32 +307,63 @@ async def form_nickname(message: Message, state: FSMContext):
         return
     text = message.text.strip()
     if len(text) < 2 or len(text) > 30:
-        await message.answer("❌ Ник должен быть от 2 до 30 символов. Попробуй ещё раз:")
+        await message.answer("❌ Никнейм должен быть от 2 до 30 символов. Попробуй ещё раз:")
         return
     await state.update_data(nickname=text)
-    await state.set_state(Form.age)
-    buttons = [[KeyboardButton(text=ag)] for ag in AGE_GROUPS]
-    buttons.append([KeyboardButton(text="⬅ Назад")])
+    # Переход к шагу 2: Имя
+    await state.set_state(Form.name)
+    buttons = [[KeyboardButton(text="⬅ Назад")]]
     await message.answer(
-        f"✅ Ник+Имя: <b>{html_mod.escape(text)}</b>\n\n"
-        "<b>Шаг 2/9</b> · Сколько тебе лет?",
+        f"✅ Никнейм: <b>{html_mod.escape(text)}</b>\n\n"
+        "<b>Шаг 2/10</b> · Какое у тебя имя? (или нажми «⬅ Пропустить»):",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
     )
 
 
-# ── Шаг 2: Возраст ──
+# ── Шаг 2: Имя ──
+
+@router.message(Form.name)
+async def form_name(message: Message, state: FSMContext):
+    text = message.text
+    if text == "⬅ Назад":
+        await state.set_state(Form.nickname)
+        await message.answer(
+            "📝 <b>Создание анкеты</b>\n\n"
+            "<b>Шаг 1/10</b> · Как тебя называют?\n"
+            "Никнейм (2–30 символов):",
+            parse_mode="HTML",
+            reply_markup=back_kb(),
+        )
+        return
+    if text == "⬅ Пропустить":
+        name = ""
+    else:
+        name = text.strip()[:30]
+    await state.update_data(name=name)
+    # Переход к шагу 3: Возраст
+    await state.set_state(Form.age)
+    buttons = [[KeyboardButton(text=ag)] for ag in AGE_GROUPS]
+    buttons.append([KeyboardButton(text="⬅ Назад")])
+    name_display = f"\n✅ Имя: <b>{html_mod.escape(name)}</b>" if name else ""
+    await message.answer(
+        f"{name_display}\n\n<b>Шаг 3/10</b> · Сколько тебе лет?",
+        parse_mode="HTML",
+        reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+    )
+
+
+# ── Шаг 3: Возраст ──
 
 @router.message(Form.age)
 async def form_age(message: Message, state: FSMContext):
     if message.text == "⬅ Назад":
-        await state.set_state(Form.nickname)
+        await state.set_state(Form.name)
+        buttons = [[KeyboardButton(text="⬅ Назад")]]
         await message.answer(
-            "📝 <b>Создание анкеты</b>\n\n"
-            "<b>Шаг 1/9</b> · Как тебя называют?\n"
-            "Какое у тебя имя + Никнейм (2–30 символов):",
+            "<b>Шаг 2/10</b> · Какое у тебя имя? (или нажми «⬅ Пропустить»):",
             parse_mode="HTML",
-            reply_markup=back_kb(),
+            reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
         )
         return
     if message.text not in AGE_GROUPS:
@@ -327,7 +375,7 @@ async def form_age(message: Message, state: FSMContext):
     buttons.append([KeyboardButton(text="⬅ Назад")])
     await message.answer(
         f"✅ Возраст: <b>{html_mod.escape(message.text)}</b>\n\n"
-        "<b>Шаг 3/9</b> · Пол:",
+        "<b>Шаг 4/10</b> · Пол:",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
     )
@@ -354,11 +402,12 @@ async def form_gender(message: Message, state: FSMContext):
     gender = [k for k, v in GENDER_OPTIONS.items() if v == text][0]
     await state.update_data(gender=gender)
 
-    # Создаём пользователя в БД (nickname + age_group + gender собраны)
+    # Создаём пользователя в БД (nickname + name + age_group + gender собраны)
     data = await state.get_data()
     await db.create_user(
         message.from_user.id,
         nickname=data["nickname"],
+        name=data.get("name", ""),
         age_group=data["age_group"],
         gender=gender,
     )
@@ -368,12 +417,12 @@ async def form_gender(message: Message, state: FSMContext):
     for i in range(0, len(GAMES), 2):
         row = []
         for gk in list(GAMES.keys())[i:i+2]:
-            row.append(KeyboardButton(text=f"🎮 {GAMES[gk]['name']}"))
+            row.append(KeyboardButton(text=f"{GAMES[gk]['icon']} {GAMES[gk]['name']}"))
         kb.append(row)
     kb.append([KeyboardButton(text="✅ Готово")])
     kb.append([KeyboardButton(text="⬅ Назад")])
     await message.answer(
-        "🎮 <b>Шаг 4/9</b> · Во что играешь?\n\n"
+        "🎮 <b>Шаг 5/10</b> · Во что играешь?\n\n"
         "Нажимай на игры, потом нажми «✅ Готово»:",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
@@ -406,7 +455,7 @@ async def form_games(message: Message, state: FSMContext):
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await state.set_state(Form.game_details)
         await message.answer(
-            f"🎯 <b>Шаг 5/9</b> · Детали по <b>{game_data['name']}</b>\n\n"
+            f"🎯 <b>Шаг 6/10</b> · Детали по <b>{game_data['name']}</b>\n\n"
             "Выбери свою роль:",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
@@ -418,7 +467,7 @@ async def form_games(message: Message, state: FSMContext):
     clean_text = text.lstrip("✅ ")
     game_key = None
     for k, v in GAMES.items():
-        if clean_text == f"🎮 {v['name']}":
+        if clean_text == f"{v['icon']} {v['name']}":
             game_key = k
             break
 
@@ -569,7 +618,7 @@ async def _save_game_and_advance(message, state, data, details, game_key):
         buttons.append([KeyboardButton(text="✅ Далее")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
-            "🔥 <b>Шаг 6/9</b> · Как ты играешь?\n\n"
+            "🔥 <b>Шаг 7/10</b> · Как ты играешь?\n\n"
             "Выбери до 3 стилей, потом «✅ Далее»:",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
@@ -667,7 +716,7 @@ async def form_play_style(message: Message, state: FSMContext):
         buttons = [[KeyboardButton(text=v)] for v in MIC_OPTIONS.values()]
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
-            "🎤 <b>Шаг 7/9</b> · Готов voice-чатить?\n\n"
+            "🎤 <b>Шаг 8/10</b> · Готов voice-чатить?\n\n"
             "Выбери вариант:",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
@@ -735,7 +784,7 @@ async def form_mic(message: Message, state: FSMContext):
         await state.set_state(Form.bio)
         await message.answer(
             f"✅ Микро: <b>{text}</b>\n\n"
-            "📝 <b>Шаг 9/9</b> · Расскажи о себе (необязательно):\n\n"
+            "📝 <b>Шаг 10/10</b> · Расскажи о себе (необязательно):\n\n"
             "Чего ищешь в тиммейтах? Любимые мемы?\n"
             "Или нажми «✅ Сохранить» чтобы пропустить:",
             parse_mode="HTML",
@@ -800,7 +849,7 @@ async def form_rating(message: Message, state: FSMContext):
         await state.set_state(Form.bio)
         await message.answer(
             "✅ Рейтинг / статус сохранён!\n\n"
-            "📝 <b>Шаг 9/9</b> · Расскажи о себе (необязательно):\n\n"
+            "📝 <b>Шаг 10/10</b> · Расскажи о себе (необязательно):\n\n"
             "Чего ищешь в тиммейтах? Любимые мемы?\n"
             "Или нажми «✅ Сохранить» чтобы пропустить:",
             parse_mode="HTML",
@@ -814,7 +863,7 @@ async def form_rating(message: Message, state: FSMContext):
         )
 
 
-# ── Шаг 9: О себе ──
+# ── Шаг 10: О себе ──
 
 @router.message(Form.bio)
 async def form_bio(message: Message, state: FSMContext):
@@ -867,7 +916,8 @@ async def form_bio(message: Message, state: FSMContext):
 
     await message.answer(
         f"🎉 <b>Анкета готова!</b>\n\n"
-        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>\n"
+        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
+        f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
         f"🎤 {mic_text}\n"
@@ -980,7 +1030,8 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
     bio_section = f"\n💬 <i>\"{bio_text[:200]}\"</i>" if bio_text else ""
 
     card = (
-        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>\n"
+        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
+        f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
         f"📅 {user['age_group']} · {gender_text}\n\n"
         f"{games_text}\n"
         f"🎤 {mic_text}{bio_section}"
@@ -1132,7 +1183,8 @@ async def my_profile(message: Message):
 
     text = (
         f"👤 <b>Мой профиль</b>\n\n"
-        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>\n"
+        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
+        f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
         f"🎤 {mic_text}\n"
@@ -1167,6 +1219,99 @@ async def cb_my_matches(callback: CallbackQuery):
 
     await callback.message.answer(text, parse_mode="HTML")
     await callback.answer()
+
+
+# ── Поддержка ──
+
+@router.message(F.text == "💬 Поддержка")
+async def support_start(message: Message, state: FSMContext):
+    await state.set_state(Form.support)
+    await message.answer(
+        "💬 <b>Поддержка</b>\n\n"
+        "Напиши своё сообщение, и оно будет анонимно переслано разработчику.\n"
+        "Ответ придёт тебе в бот.\n\n"
+        "Напиши сообщение или нажми «⬅ Назад»:",
+        parse_mode="HTML",
+        reply_markup=back_kb(),
+    )
+
+
+@router.message(Form.support)
+async def support_send(message: Message, state: FSMContext):
+    text = message.text
+
+    if text == "⬅ Назад":
+        await state.clear()
+        await message.answer("🏠 В главное меню:", reply_markup=main_kb())
+        return
+
+    if not text or len(text) < 2:
+        await message.answer("❌ Напиши сообщение длиннее 2 символов:")
+        return
+
+    # Анонимная пересылка владельцу
+    if OWNER_ID:
+        try:
+            await bot.send_message(
+                OWNER_ID,
+                f"📩 <b>Анонимное сообщение из бота DuoQ</b>\n"
+                f"👤 User ID: <code>{message.from_user.id}</code>\n"
+                f"🆔 Никнейм: @{message.from_user.username or 'нет'}\n\n"
+                f"{html_mod.escape(text[:1000])}\n\n"
+                f"💬 Ответить: /reply {message.from_user.id} <текст>",
+                parse_mode="HTML",
+            )
+        except Exception as e:
+            logging.error(f"Не удалось отправить сообщение владельцу: {e}")
+
+    await message.answer(
+        "✅ <b>Сообщение отправлено!</b>\n\n"
+        "Разработчик получит его анонимно.\n"
+        "Если нужен ответ — напиши ещё или нажми «⬅ Назад»:",
+        parse_mode="HTML",
+        reply_markup=back_kb(),
+    )
+
+
+@router.message(Command("reply"))
+async def cmd_reply(message: Message):
+    """Команда для владельца: /reply USER_ID текст"""
+    if OWNER_ID and message.from_user.id != OWNER_ID:
+        await message.answer("❌ У тебя нет прав.")
+        return
+
+    parts = message.text.split(maxsplit=2)
+    if len(parts) < 3:
+        await message.answer("Использование: /reply USER_ID текст")
+        return
+
+    try:
+        target_id = int(parts[1])
+    except ValueError:
+        await message.answer("USER_ID должен быть числом.")
+        return
+
+    reply_text = parts[2]
+    try:
+        await bot.send_message(
+            target_id,
+            f"💬 <b>Ответ от поддержки DuoQ:</b>\n\n{html_mod.escape(reply_text[:1000])}",
+            parse_mode="HTML",
+        )
+        await message.answer(f"✅ Ответ отправлен пользователю {target_id}")
+    except Exception as e:
+        await message.answer(f"❌ Не удалось отправить: {e}")
+
+
+# ── Команда /myid ──
+
+@router.message(Command("myid"))
+async def cmd_myid(message: Message):
+    await message.answer(
+        f"🆔 Твой Telegram ID: <code>{message.from_user.id}</code>\n"
+        f"👤 Username: @{message.from_user.username or 'нет'}",
+        parse_mode="HTML",
+    )
 
 
 # ── Настройки ──
