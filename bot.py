@@ -155,6 +155,7 @@ MIC_OPTIONS = {"mic": "🎤 Микро есть", "listen": "🎧 Только �
 # ── Перевод полей extra_fields для отображения ──
 
 EXTRA_FIELD_LABELS = {
+    "FaceIt": "🎯 FaceIt",
     "prime_status": "Прайм",
     "premier_rating": "Премьер-рейтинг",
     "has_mmr": "MMR",
@@ -950,7 +951,7 @@ async def form_bio(message: Message, state: FSMContext):
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
-        f"🎤 {mic_text}\n"
+        f"{mic_text}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
         "Теперь нажми «🔍 Найти тиммейтов» чтобы найти напарников!",
         parse_mode="HTML",
@@ -1062,7 +1063,7 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
         f"📅 {user['age_group']} · {gender_text}\n\n"
         f"{games_text}\n"
-        f"🎤 {mic_text}{bio_section}"
+        f"{mic_text}{bio_section}"
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -1216,7 +1217,7 @@ async def my_profile(message: Message):
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
-        f"🎤 {mic_text}\n"
+        f"{mic_text}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
         f"📊 Статистика:\n"
         f"  🎉 Матчей: <b>{len(matches)}</b>\n"
