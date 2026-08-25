@@ -28,6 +28,7 @@ async def init_db():
             mic_status TEXT NOT NULL DEFAULT 'no_mic',
             languages TEXT NOT NULL DEFAULT '["ru"]',
             play_style TEXT DEFAULT '[]',
+            rating TEXT DEFAULT '',
             bio TEXT DEFAULT '',
             is_active INTEGER NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -80,6 +81,12 @@ async def init_db():
     # Миграция: добавить play_style если нет
     try:
         await db.execute("ALTER TABLE users ADD COLUMN play_style TEXT DEFAULT '[]'")
+        await db.commit()
+    except Exception:
+        pass  # колонка уже есть
+    # Миграция: добавить rating если нет
+    try:
+        await db.execute("ALTER TABLE users ADD COLUMN rating TEXT DEFAULT ''")
         await db.commit()
     except Exception:
         pass  # колонка уже есть
