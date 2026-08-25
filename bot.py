@@ -155,7 +155,7 @@ MIC_OPTIONS = {"mic": "🎤 Микро есть", "listen": "🎧 Только �
 # ── Перевод полей extra_fields для отображения ──
 
 EXTRA_FIELD_LABELS = {
-    "FaceIt": "🎯 FaceIt",
+    "FaceIt": "🎯FaceIt",
     "prime_status": "Прайм",
     "has_mmr": "MMR",
     "mmr": "MMR",
@@ -937,7 +937,7 @@ async def form_bio(message: Message, state: FSMContext):
         extra_str = " · ".join(extra_parts)
         line = f"{game_icon} {g['game_name']} · {g['rank']}{role_str}"
         if extra_str:
-            line += f"\n    {extra_str}"
+            line += f"\n{extra_str}"
         games_lines.append(line)
     games_text = "\n".join(games_lines) if games_lines else "не указано"
     gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "🤔 Не указывать")
@@ -1049,7 +1049,7 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
         extra_parts = _format_extra_fields(extra)
         lines = f"  {game_icon} {g['game_name']} · {g['rank']}{role_str}"
         if extra_parts:
-            lines += "\n     " + " · ".join(extra_parts)
+            lines += "\n" + " · ".join(extra_parts)
         games_lines.append(lines)
     games_text = "\n".join(games_lines) if games_lines else "  не указано"
 
@@ -1205,7 +1205,7 @@ async def my_profile(message: Message):
         extra_str = " · ".join(extra_parts)
         line = f"{game_icon} {g['game_name']} · {g['rank']}{role_str}"
         if extra_str:
-            line += f"\n    {extra_str}"
+            line += f"\n{extra_str}"
         games_lines.append(line)
     games_text = "\n".join(games_lines) if games_lines else "не указано"
 
