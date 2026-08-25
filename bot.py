@@ -53,7 +53,6 @@ GAMES = {
         "platforms": [
             {"name": "FaceIt", "options": ["Уровень 1", "Уровень 2", "Уровень 3", "Уровень 4", "Уровень 5",
                                             "Уровень 6", "Уровень 7", "Уровень 8", "Уровень 9", "Уровень 10"]},
-            {"name": "Премьер (рейтинг)", "options": []},
         ],
     },
     "dota2": {
@@ -153,6 +152,36 @@ PLAY_STYLES = ["🔥 Агрессивно", "🧊 Спокойно", "🧠 Ст�
                "😤 Соло", "🤝 Командно"]
 MIC_OPTIONS = {"mic": "🎤 Микро есть", "listen": "🎧 Только слушаю", "no_mic": "🔇 Нет микрофона"}
 
+# ── Перевод полей extra_fields для отображения ──
+
+EXTRA_FIELD_LABELS = {
+    "prime_status": "Прайм",
+    "premier_rating": "Премьер-рейтинг",
+    "has_mmr": "MMR",
+    "mmr": "MMR",
+    "rust_premium": "Премиум",
+    "minecraft_premium": "Премиум",
+}
+
+# Поля extra_fields, которые не показываем (уже отображаются отдельно)
+EXTRA_FIELD_SKIP = {"role", "rank"}
+
+
+def _format_extra_fields(extra: dict) -> list:
+    """Форматировать extra_fields в читаемый список строк."""
+    parts = []
+    for k, v in extra.items():
+        if not v or k in EXTRA_FIELD_SKIP:
+            continue
+        if k.startswith("platform"):
+            parts.append(f"📊 {v}")
+        elif k in EXTRA_FIELD_LABELS:
+            label = EXTRA_FIELD_LABELS[k]
+            parts.append(f"{label}: {v}")
+        else:
+            parts.append(f"{k}: {v}")
+    return parts
+
 # ── Игро-специфичные вопросы (шаг 9/10) ──
 
 GAME_RATING_QUESTIONS = {
@@ -216,7 +245,7 @@ async def _show_rating_question(message, queue, q_idx):
         ]
 
     await message.answer(
-        f"🎮 <b>{game_name}</b>\n\n"
+        f"{GAMES[gk]['icon']} <b>{game_name}</b>\n\n"
         f"🏆 <b>Шаг 9/10</b> · {q['text']}",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
@@ -488,7 +517,7 @@ async def form_games(message: Message, state: FSMContext):
         row = []
         for gk in list(GAMES.keys())[i:i+2]:
             prefix = "✅ " if gk in selected else ""
-            row.append(KeyboardButton(text=f"{prefix}🎮 {GAMES[gk]['name']}"))
+            row.append(KeyboardButton(text=f"{prefix}{GAMES[gk]['icon']} {GAMES[gk]['name']}"))
         kb.append(row)
     kb.append([KeyboardButton(text="✅ Готово")])
     kb.append([KeyboardButton(text="⬅ Назад")])
@@ -516,7 +545,7 @@ async def form_game_details(message: Message, state: FSMContext):
             row = []
             for gk in list(GAMES.keys())[i:i+2]:
                 prefix = "✅ " if gk in selected else ""
-                row.append(KeyboardButton(text=f"{prefix}🎮 {GAMES[gk]['name']}"))
+                row.append(KeyboardButton(text=f"{prefix}{GAMES[gk]['icon']} {GAMES[gk]['name']}"))
             kb.append(row)
         kb.append([KeyboardButton(text="✅ Готово")])
         await message.answer("Назад к выбору игр:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
@@ -898,19 +927,20 @@ async def form_bio(message: Message, state: FSMContext):
     games_lines = []
     for g in games:
         extra = json.loads(g.get("extra_fields", "{}") or "{}")
-        extra_parts = []
-        for k, v in extra.items():
-            if v:
-                if k.startswith("platform"):
-                    extra_parts.append(v)
-                else:
-                    extra_parts.append(f"{k}: {v}")
+        extra_parts = _format_extra_fields(extra)
+        # Найти иконку игры
+        game_icon = "🎮"
+        for gk, gd in GAMES.items():
+            if gd["name"] == g["game_name"]:
+                game_icon = gd["icon"]
+                break
+        role_str = f" · {g['role']}" if g.get("role") else ""
         extra_str = " · ".join(extra_parts)
+        line = f"{game_icon} {g['game_name']} · {g['rank']}{role_str}"
         if extra_str:
-            games_lines.append(f"{g['game_name']} ({g['rank']}) — {extra_str}")
-        else:
-            games_lines.append(f"{g['game_name']} ({g['rank']})")
-    games_text = ", ".join(games_lines) or "не указано"
+            line += f"\n    {extra_str}"
+        games_lines.append(line)
+    games_text = "\n".join(games_lines) if games_lines else "не указано"
     gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "🤔 Не указывать")
     mic_text = MIC_OPTIONS.get(user.get("mic_status", "no_mic"), "🔇 Нет микрофона")
 
@@ -1009,18 +1039,16 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
 
     games_lines = []
     for g in games:
-        lines = f"  🎯 {g['game_name']} · {g['rank']}"
-        if g.get("role"):
-            lines += f" · {g['role']}"
+        # Найти иконку игры
+        game_icon = "🎮"
+        for gk, gd in GAMES.items():
+            if gd["name"] == g["game_name"]:
+                game_icon = gd["icon"]
+                break
+        role_str = f" · {g['role']}" if g.get("role") else ""
         extra = json.loads(g.get("extra_fields", "{}") or "{}")
-        extra_parts = []
-        for k, v in extra.items():
-            if v:
-                if k.startswith("platform"):
-                    extra_parts.append(f"📊 {v}")
-                else:
-                    # Игро-специфичные поля (prime_status, mmr, premium и т.д.)
-                    extra_parts.append(f"🏆 {v}")
+        extra_parts = _format_extra_fields(extra)
+        lines = f"  {game_icon} {g['game_name']} · {g['rank']}{role_str}"
         if extra_parts:
             lines += "\n     " + " · ".join(extra_parts)
         games_lines.append(lines)
@@ -1167,19 +1195,20 @@ async def my_profile(message: Message):
     games_lines = []
     for g in games:
         extra = json.loads(g.get("extra_fields", "{}") or "{}")
-        extra_parts = []
-        for k, v in extra.items():
-            if v:
-                if k.startswith("platform"):
-                    extra_parts.append(v)
-                else:
-                    extra_parts.append(f"{k}: {v}")
+        extra_parts = _format_extra_fields(extra)
+        # Найти иконку игры
+        game_icon = "🎮"
+        for gk, gd in GAMES.items():
+            if gd["name"] == g["game_name"]:
+                game_icon = gd["icon"]
+                break
+        role_str = f" · {g['role']}" if g.get("role") else ""
         extra_str = " · ".join(extra_parts)
+        line = f"{game_icon} {g['game_name']} · {g['rank']}{role_str}"
         if extra_str:
-            games_lines.append(f"{g['game_name']} ({g['rank']}) — {extra_str}")
-        else:
-            games_lines.append(f"{g['game_name']} ({g['rank']})")
-    games_text = ", ".join(games_lines) or "нет"
+            line += f"\n    {extra_str}"
+        games_lines.append(line)
+    games_text = "\n".join(games_lines) if games_lines else "не указано"
 
     text = (
         f"👤 <b>Мой профиль</b>\n\n"
