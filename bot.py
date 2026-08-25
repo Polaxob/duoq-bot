@@ -1292,12 +1292,12 @@ async def support_send(message: Message, state: FSMContext):
         except Exception as e:
             logging.error(f"Не удалось отправить сообщение владельцу: {e}")
 
+    await state.clear()
     await message.answer(
         "✅ <b>Сообщение отправлено!</b>\n\n"
-        "Разработчик получит его анонимно.\n"
-        "Если нужен ответ — напиши ещё или нажми «⬅ Назад»:",
+        "Разработчик получит его анонимно.",
         parse_mode="HTML",
-        reply_markup=back_kb(),
+        reply_markup=main_kb(),
     )
 
 
