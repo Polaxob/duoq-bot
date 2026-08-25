@@ -23,6 +23,7 @@ async def init_db():
         CREATE TABLE IF NOT EXISTS users (
             telegram_id INTEGER PRIMARY KEY,
             nickname TEXT NOT NULL,
+            name TEXT NOT NULL DEFAULT '',
             age_group TEXT NOT NULL,
             gender TEXT NOT NULL DEFAULT 'hidden',
             mic_status TEXT NOT NULL DEFAULT 'no_mic',
@@ -90,16 +91,22 @@ async def init_db():
         await db.commit()
     except Exception:
         pass  # колонка уже есть
+    # Миграция: добавить name если нет
+    try:
+        await db.execute("ALTER TABLE users ADD COLUMN name TEXT DEFAULT ''")
+        await db.commit()
+    except Exception:
+        pass  # колонка уже есть
     await db.close()
 
 
 # ---- User operations ----
 
-async def create_user(telegram_id: int, nickname: str, age_group: str, gender: str):
+async def create_user(telegram_id: int, nickname: str, name: str, age_group: str, gender: str):
     db = await get_db()
     await db.execute(
-        "INSERT OR REPLACE INTO users (telegram_id, nickname, age_group, gender) VALUES (?, ?, ?, ?)",
-        (telegram_id, nickname, age_group, gender),
+        "INSERT OR REPLACE INTO users (telegram_id, nickname, name, age_group, gender) VALUES (?, ?, ?, ?, ?)",
+        (telegram_id, nickname, name, age_group, gender),
     )
     await db.commit()
     await db.close()
