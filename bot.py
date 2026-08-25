@@ -222,7 +222,7 @@ async def form_nickname(message: Message, state: FSMContext):
     buttons = [[KeyboardButton(text=ag)] for ag in AGE_GROUPS]
     buttons.append([KeyboardButton(text="⬅ Назад")])
     await message.answer(
-        f"✅ Ник: <b>{text}</b>\n\n"
+        f"✅ Ник+Имя: <b>{text}</b>\n\n"
         "<b>Шаг 2/8</b> · Сколько тебе лет?",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
