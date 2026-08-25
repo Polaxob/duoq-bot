@@ -592,8 +592,10 @@ async def form_game_details(message: Message, state: FSMContext):
             buttons = []
             if platform["options"]:
                 buttons = [[KeyboardButton(text=o)] for o in platform["options"]]
+                buttons.append([KeyboardButton(text="🚫 Нет")])
                 buttons.append([KeyboardButton(text="⬅ Пропустить")])
             else:
+                buttons.append([KeyboardButton(text="🚫 Нет")])
                 buttons.append([KeyboardButton(text="⬅ Пропустить")])
             await message.answer(
                 f"✅ Ранг: <b>{text}</b>\n\n"
@@ -671,13 +673,14 @@ async def form_platform(message: Message, state: FSMContext):
         await state.set_state(Form.game_details)
         await state.update_data(current_detail_field="rank")
         buttons = [[KeyboardButton(text=r)] for r in game_data["ranks"]]
+        buttons.append([KeyboardButton(text="🚫 Нет ранга")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer("Назад к выбору ранга:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
         return
 
     platform = platforms[platform_idx]
 
-    if text == "⬅ Пропустить":
+    if text == "⬅ Пропустить" or text == "🚫 Нет":
         # Пропускаем эту платформу
         pass
     else:
@@ -694,6 +697,7 @@ async def form_platform(message: Message, state: FSMContext):
         buttons = []
         if next_platform["options"]:
             buttons = [[KeyboardButton(text=o)] for o in next_platform["options"]]
+            buttons.append([KeyboardButton(text="🚫 Нет")])
         buttons.append([KeyboardButton(text="⬅ Пропустить")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
