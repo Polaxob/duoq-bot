@@ -565,6 +565,7 @@ async def form_game_details(message: Message, state: FSMContext):
         await state.update_data(game_details=details, current_detail_field="rank")
 
         buttons = [[KeyboardButton(text=r)] for r in game_data["ranks"]]
+        buttons.append([KeyboardButton(text="🚫 Нет ранга")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
             f"✅ Роль: <b>{text}</b>\n\n"
@@ -575,10 +576,10 @@ async def form_game_details(message: Message, state: FSMContext):
         return
 
     if field == "rank":
-        if text not in game_data["ranks"]:
+        if text not in game_data["ranks"] and text != "🚫 Нет ранга":
             await message.answer("❌ Выбери ранг кнопкой:")
             return
-        details[game_key]["rank"] = text
+        details[game_key]["rank"] = "" if text == "🚫 Нет ранга" else text
         await state.update_data(game_details=details)
 
         # Проверяем, есть ли платформы у игры
