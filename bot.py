@@ -140,6 +140,75 @@ PLAY_STYLES = ["🔥 Агрессивно", "🧊 Спокойно", "🧠 Ст�
                "😤 Соло", "🤝 Командно"]
 MIC_OPTIONS = {"mic": "🎤 Микро есть", "listen": "🎧 Только слушаю", "no_mic": "🔇 Нет микрофона"}
 
+# ── Игро-специфичные вопросы (шаг 8/9) ──
+
+GAME_RATING_QUESTIONS = {
+    "cs2": [
+        {"text": "У тебя есть Прайм статус в CS2?", "field": "prime_status", "type": "yesno"},
+        {"text": "Укажи Премьер-рейтинг (число, или «⬅ Пропустить»):", "field": "premier_rating", "type": "text"},
+    ],
+    "dota2": [
+        {"text": "У тебя есть рейтинг (MMR) в Dota 2?", "field": "has_mmr", "type": "yesno"},
+        {"text": "Укажи свой MMR (число, или «⬅ Пропустить»):", "field": "mmr", "type": "text"},
+    ],
+    "rust": [
+        {"text": "У тебя есть Премиум в Rust?", "field": "rust_premium", "type": "yesno"},
+    ],
+    "minecraft": [
+        {"text": "Премиум (платный) аккаунт Minecraft?", "field": "minecraft_premium", "type": "yesno"},
+    ],
+}
+
+
+def _build_rating_queue(selected_games):
+    """Построить плоский список вопросов для шага 8."""
+    queue = []
+    for gk in selected_games:
+        qs = GAME_RATING_QUESTIONS.get(gk, [])
+        for qi in range(len(qs)):
+            queue.append((gk, qi))
+    return queue
+
+
+async def _save_rating_answer(user_id, game_key, field, value):
+    """Сохранить ответ в extra_fields конкретной игры."""
+    game_name = GAMES[game_key]["name"]
+    games = await db.get_user_games(user_id)
+    for g in games:
+        if g["game_name"] == game_name:
+            extra = json.loads(g.get("extra_fields", "{}") or "{}")
+            extra[field] = value
+            await db.upsert_game_profile(
+                user_id, game_name,
+                g.get("rank", ""), g.get("role", ""), extra,
+            )
+            return
+
+
+async def _show_rating_question(message, queue, q_idx):
+    """Показать вопрос из очереди рейтинга."""
+    gk, qi = queue[q_idx]
+    q = GAME_RATING_QUESTIONS[gk][qi]
+    game_name = GAMES[gk]["name"]
+
+    if q["type"] == "yesno":
+        kb = [
+            [KeyboardButton(text="✅ Есть"), KeyboardButton(text="❌ Нет")],
+            [KeyboardButton(text="⬅ Назад")],
+        ]
+    else:
+        kb = [
+            [KeyboardButton(text="⬅ Пропустить")],
+            [KeyboardButton(text="⬅ Назад")],
+        ]
+
+    await message.answer(
+        f"🎮 <b>{game_name}</b>\n\n"
+        f"🏆 <b>Шаг 8/9</b> · {q['text']}",
+        parse_mode="HTML",
+        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
+    )
+
 # ── FSM для создания анкеты ──
 
 class Form(StatesGroup):
@@ -653,57 +722,96 @@ async def form_mic(message: Message, state: FSMContext):
     mic = [k for k, v in MIC_OPTIONS.items() if v == text][0]
     await db.update_user(message.from_user.id, mic_status=mic)
 
-    # Шаг 8: Рейтинг / статус
-    await state.set_state(Form.rating)
-    await message.answer(
-        f"✅ Микро: <b>{text}</b>\n\n"
-        "🏆 <b>Шаг 8/9</b> · Укажи свой рейтинг / статус (необязательно):\n\n"
-        "Премьер-рейтинг в CS2, MMR в Dota,\n"
-        "Премиум в Rust и т.д.\n\n"
-        "Напиши или нажми «✅ Далее» чтобы пропустить:",
-        parse_mode="HTML",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="✅ Далее")],
-                [KeyboardButton(text="⬅ Назад")],
-            ],
-            resize_keyboard=True,
-        ),
-    )
+    # Шаг 8: Игро-специфичные вопросы о рейтинге/премиуме
+    data = await state.get_data()
+    queue = _build_rating_queue(data.get("selected_games", []))
+    await state.update_data(rating_queue=queue, rating_q_idx=0)
+
+    if queue:
+        await state.set_state(Form.rating)
+        await _show_rating_question(message, queue, 0)
+    else:
+        # Нет вопросов — сразу к био
+        await state.set_state(Form.bio)
+        await message.answer(
+            f"✅ Микро: <b>{text}</b>\n\n"
+            "📝 <b>Шаг 9/9</b> · Расскажи о себе (необязательно):\n\n"
+            "Чего ищешь в тиммейтах? Любимые мемы?\n"
+            "Или нажми «✅ Сохранить» чтобы пропустить:",
+            parse_mode="HTML",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text="✅ Сохранить")],
+                    [KeyboardButton(text="⬅ Назад")],
+                ],
+                resize_keyboard=True,
+            ),
+        )
 
 
-# ── Шаг 8: Рейтинг / статус ──
+# ── Шаг 8: Игро-специфичные вопросы о рейтинге/премиуме ──
 
 @router.message(Form.rating)
 async def form_rating(message: Message, state: FSMContext):
     text = message.text
+    data = await state.get_data()
+    queue = data.get("rating_queue", [])
+    idx = data.get("rating_q_idx", 0)
 
     if text == "⬅ Назад":
-        await state.set_state(Form.mic)
-        buttons = [[KeyboardButton(text=v)] for v in MIC_OPTIONS.values()]
-        buttons.append([KeyboardButton(text="⬅ Назад")])
-        await message.answer("Назад к микрофону:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+        if idx > 0:
+            idx -= 1
+            await state.update_data(rating_q_idx=idx)
+            await _show_rating_question(message, queue, idx)
+        else:
+            # Назад к микрофону
+            await state.set_state(Form.mic)
+            buttons = [[KeyboardButton(text=v)] for v in MIC_OPTIONS.values()]
+            buttons.append([KeyboardButton(text="⬅ Назад")])
+            await message.answer(
+                "Назад к микрофону:",
+                reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+            )
         return
 
-    rating = "" if text == "✅ Далее" else text[:100]
-    await db.update_user(message.from_user.id, rating=rating)
+    # Сохраняем ответ на текущий вопрос
+    gk, qi = queue[idx]
+    q = GAME_RATING_QUESTIONS[gk][qi]
+    field = q["field"]
 
-    # Шаг 9: О себе
-    await state.set_state(Form.bio)
-    await message.answer(
-        f"✅ Рейтинг: <b>{html_mod.escape(rating) if rating else 'пропущено'}</b>\n\n"
-        "📝 <b>Шаг 9/9</b> · Расскажи о себе (необязательно):\n\n"
-        "Чего ищешь в тиммейтах? Любимые мемы?\n"
-        "Или нажми «✅ Сохранить» чтобы пропустить:",
-        parse_mode="HTML",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="✅ Сохранить")],
-                [KeyboardButton(text="⬅ Назад")],
-            ],
-            resize_keyboard=True,
-        ),
-    )
+    if text == "⬅ Пропустить":
+        value = ""
+    elif text == "✅ Есть":
+        value = "Есть"
+    elif text == "❌ Нет":
+        value = "Нет"
+    else:
+        value = text[:100]
+
+    await _save_rating_answer(message.from_user.id, gk, field, value)
+
+    # Следующий вопрос или завершение
+    idx += 1
+    if idx < len(queue):
+        await state.update_data(rating_q_idx=idx)
+        await _show_rating_question(message, queue, idx)
+    else:
+        # Все вопросы пройдены → био
+        await state.set_state(Form.bio)
+        await message.answer(
+            "✅ Рейтинг / статус сохранён!\n\n"
+            "📝 <b>Шаг 9/9</b> · Расскажи о себе (необязательно):\n\n"
+            "Чего ищешь в тиммейтах? Любимые мемы?\n"
+            "Или нажми «✅ Сохранить» чтобы пропустить:",
+            parse_mode="HTML",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text="✅ Сохранить")],
+                    [KeyboardButton(text="⬅ Назад")],
+                ],
+                resize_keyboard=True,
+            ),
+        )
 
 
 # ── Шаг 9: О себе ──
@@ -713,17 +821,21 @@ async def form_bio(message: Message, state: FSMContext):
     text = message.text
 
     if text == "⬅ Назад":
-        await state.set_state(Form.rating)
-        await message.answer(
-            "Назад к рейтингу:",
-            reply_markup=ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="✅ Далее")],
-                    [KeyboardButton(text="⬅ Назад")],
-                ],
-                resize_keyboard=True,
-            ),
-        )
+        data = await state.get_data()
+        queue = data.get("rating_queue", [])
+        if queue:
+            last_idx = len(queue) - 1
+            await state.set_state(Form.rating)
+            await state.update_data(rating_q_idx=last_idx)
+            await _show_rating_question(message, queue, last_idx)
+        else:
+            await state.set_state(Form.mic)
+            buttons = [[KeyboardButton(text=v)] for v in MIC_OPTIONS.values()]
+            buttons.append([KeyboardButton(text="⬅ Назад")])
+            await message.answer(
+                "Назад к микрофону:",
+                reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+            )
         return
 
     bio = "" if text == "✅ Сохранить" else text[:500]
@@ -737,11 +849,18 @@ async def form_bio(message: Message, state: FSMContext):
     games_lines = []
     for g in games:
         extra = json.loads(g.get("extra_fields", "{}") or "{}")
-        platform_str = ""
+        extra_parts = []
         for k, v in extra.items():
-            if k.startswith("platform"):
-                platform_str += f" · {v}"
-        games_lines.append(f"{g['game_name']} ({g['rank']}){platform_str}")
+            if v:
+                if k.startswith("platform"):
+                    extra_parts.append(v)
+                else:
+                    extra_parts.append(f"{k}: {v}")
+        extra_str = " · ".join(extra_parts)
+        if extra_str:
+            games_lines.append(f"{g['game_name']} ({g['rank']}) — {extra_str}")
+        else:
+            games_lines.append(f"{g['game_name']} ({g['rank']})")
     games_text = ", ".join(games_lines) or "не указано"
     gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "🤔 Не указывать")
     mic_text = MIC_OPTIONS.get(user.get("mic_status", "no_mic"), "🔇 Нет микрофона")
@@ -752,7 +871,6 @@ async def form_bio(message: Message, state: FSMContext):
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
         f"🎤 {mic_text}\n"
-        f"🏆 {user.get('rating', '') or 'не указано'}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
         "Теперь нажми «🔍 Найти тиммейтов» чтобы найти напарников!",
         parse_mode="HTML",
@@ -845,22 +963,26 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
         if g.get("role"):
             lines += f" · {g['role']}"
         extra = json.loads(g.get("extra_fields", "{}") or "{}")
+        extra_parts = []
         for k, v in extra.items():
-            if k.startswith("platform"):
-                lines += f"\n     📊 {v}"
+            if v:
+                if k.startswith("platform"):
+                    extra_parts.append(f"📊 {v}")
+                else:
+                    # Игро-специфичные поля (prime_status, mmr, premium и т.д.)
+                    extra_parts.append(f"🏆 {v}")
+        if extra_parts:
+            lines += "\n     " + " · ".join(extra_parts)
         games_lines.append(lines)
     games_text = "\n".join(games_lines) if games_lines else "  не указано"
 
     bio_text = user.get("bio", "")
     bio_section = f"\n💬 <i>\"{bio_text[:200]}\"</i>" if bio_text else ""
-    rating_text = user.get("rating", "")
-    rating_section = f"\n🏆 {rating_text}" if rating_text else ""
 
     card = (
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>\n"
         f"📅 {user['age_group']} · {gender_text}\n\n"
         f"{games_text}\n"
-        f"{rating_section}\n"
         f"🎤 {mic_text}{bio_section}"
     )
 
@@ -994,11 +1116,18 @@ async def my_profile(message: Message):
     games_lines = []
     for g in games:
         extra = json.loads(g.get("extra_fields", "{}") or "{}")
-        plat = ""
+        extra_parts = []
         for k, v in extra.items():
-            if k.startswith("platform"):
-                plat += f" · {v}"
-        games_lines.append(f"{g['game_name']} ({g['rank']}){plat}")
+            if v:
+                if k.startswith("platform"):
+                    extra_parts.append(v)
+                else:
+                    extra_parts.append(f"{k}: {v}")
+        extra_str = " · ".join(extra_parts)
+        if extra_str:
+            games_lines.append(f"{g['game_name']} ({g['rank']}) — {extra_str}")
+        else:
+            games_lines.append(f"{g['game_name']} ({g['rank']})")
     games_text = ", ".join(games_lines) or "нет"
 
     text = (
@@ -1007,7 +1136,6 @@ async def my_profile(message: Message):
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
         f"🎤 {mic_text}\n"
-        f"🏆 {user.get('rating', '') or 'не указано'}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
         f"📊 Статистика:\n"
         f"  🎉 Матчей: <b>{len(matches)}</b>\n"
