@@ -38,67 +38,96 @@ logging.basicConfig(level=logging.INFO)
 GAMES = {
     "cs2": {
         "name": "CS2",
-        "ranks": ["Silver I", "Silver II", "Silver III", "Silver IV", "Silver Elite",
-                  "Gold Nova I", "Gold Nova II", "Gold Nova III", "Gold Nova Master",
-                  "Master Guardian I", "Master Guardian II", "Master Guardian Elite",
-                  "Distinguished Master Guardian", "Legendary Eagle", "Legendary Eagle Master",
-                  "Supreme Master", "Global Elite"],
-        "roles": ["Rifler", "AWP", "IGL", "Support", "Entry"],
+        "ranks": [
+            "Серебро I", "Серебро II", "Серебро III", "Серебро IV", "Серебряная звезда",
+            "Серебряная звезда I", "Серебряная звезда II", "Серебряная звезда III",
+            "Золотая звезда I", "Золотая звезда II", "Золотая звезда III", "Мастер золотых звёзд",
+            "Мастер страж I", "Мастер страж II", "Элита мастеров",
+            "Достойный мастер страж", "Орёл-легенда", "Мастер орлов-легенд",
+            "Верховный мастер", "Глобальная элита",
+        ],
+        "roles": ["Рифлер", "Снайпер (AWP)", "Капитан (IGL)", "Поддержка", "Прорыв (Entry)"],
+        "platforms": [
+            {"name": "FaceIt", "options": ["Уровень 1", "Уровень 2", "Уровень 3", "Уровень 4", "Уровень 5",
+                                            "Уровень 6", "Уровень 7", "Уровень 8", "Уровень 9", "Уровень 10"]},
+            {"name": "Premier (рейтинг)", "options": []},  # свободный ввод
+        ],
     },
     "dota2": {
         "name": "Dota 2",
-        "ranks": ["Herald", "Guardian", "Crusader", "Archon", "Legend", "Ancient", "Divine", "Immortal"],
-        "roles": ["Carry", "Mid", "Offlane", "Soft Support", "Hard Support"],
+        "ranks": ["Герольд", "Страж", "Крестоносец", "Архонт", "Легенда", "Древний", "Божественный", "Бессмертный"],
+        "roles": ["Керри", "Мид", "Оффлейн", "Мягкая поддержка", "Твёрдая поддержка"],
+        "platforms": [
+            {"name": "DotaBuff MMR", "options": []},  # свободный ввод
+        ],
     },
     "valorant": {
         "name": "Valorant",
-        "ranks": ["Iron", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ascendant", "Immortal", "Radiant"],
-        "roles": ["Duelist", "Sentinel", "Controller", "Initiator"],
+        "ranks": ["Железо", "Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Восхождение", "Бессмертный", "Радиант"],
+        "roles": ["Дуэлянт", "Страж", "Контролёр", "Инициатор"],
+        "platforms": [
+            {"name": "Tracker Network", "options": []},
+        ],
     },
     "fortnite": {
         "name": "Fortnite",
-        "ranks": ["Bot", "Новичок", "Средний", "Выше среднего", "Продвинутый", "Эксперт"],
-        "roles": ["Build", "No-Build", "Оба режима"],
+        "ranks": ["Бот", "Новичок", "Средний", "Выше среднего", "Продвинутый", "Эксперт"],
+        "roles": ["Строитель", "Без строительства", "Оба режима"],
+        "platforms": [],
     },
     "apex": {
         "name": "Apex Legends",
-        "ranks": ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Predator"],
+        "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Мастер", "Хищник"],
         "roles": ["Танк", "Урон", "Поддержка"],
+        "platforms": [
+            {"name": "Apex Tracker", "options": []},
+        ],
     },
     "pubg": {
         "name": "PUBG",
-        "ranks": ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master"],
+        "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Мастер"],
         "roles": ["Агрессивный", "Пассивный", "Универсал"],
+        "platforms": [],
     },
     "rust": {
         "name": "Rust",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
-        "roles": ["PvP", "PvE", "Builder", "Raid"],
+        "roles": ["PvP", "PvE", "Строитель", "Рейдер"],
+        "platforms": [],
     },
     "minecraft": {
         "name": "Minecraft",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
-        "roles": ["SMP", "Creative", "Modded", "PvP", "Speedrun"],
+        "roles": ["SMP", "Креатив", "Модded", "PvP", "Спидран"],
+        "platforms": [
+            {"name": "Hypixel", "options": ["Новичок", "Средний", "Опытный", "Профи"]},
+        ],
     },
     "gtav": {
         "name": "GTA V",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
-        "roles": ["Heists", "RP", "PvP", "Кэш-хант"],
+        "roles": ["Хейсты", "РП", "PvP", "Кэш-хант"],
+        "platforms": [],
     },
     "league": {
         "name": "League of Legends",
-        "ranks": ["Iron", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Challenger"],
-        "roles": ["Top", "Jungle", "Mid", "ADC", "Support"],
+        "ranks": ["Железо", "Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Мастер", "Грандмастер", "Челленджер"],
+        "roles": ["Топ", "Джангл", "Мид", "АДК", "Саппорт"],
+        "platforms": [
+            {"name": "op.gg", "options": []},
+        ],
     },
     "rl": {
         "name": "Rocket League",
-        "ranks": ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Champion", "Grand Champion", "SSL"],
+        "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Чемпион", "Гранд-чемпион", "Суперз脎 Стён"],
         "roles": ["2v2", "3v3", "1v1"],
+        "platforms": [],
     },
     "dayz": {
         "name": "DayZ",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
-        "roles": ["PvP", "PvE", "Roleplay"],
+        "roles": ["PvP", "PvE", "Ролеплей"],
+        "platforms": [],
     },
 }
 
@@ -118,6 +147,7 @@ class Form(StatesGroup):
     gender = State()
     games = State()
     game_details = State()
+    platform = State()
     play_style = State()
     mic = State()
     bio = State()
@@ -173,7 +203,7 @@ async def start_form(message: Message, state: FSMContext):
     await message.answer(
         "📝 <b>Создание анкеты</b>\n\n"
         "<b>Шаг 1/8</b> · Как тебя называют?\n"
-        "Напиши свой ник или имя (2–30 символов):",
+        "Напиши своё имя и ник (2–30 символов):",
         parse_mode="HTML",
         reply_markup=back_kb(),
     )
@@ -368,41 +398,135 @@ async def form_game_details(message: Message, state: FSMContext):
         details[game_key]["rank"] = text
         await state.update_data(game_details=details)
 
-        # Сохраняем в БД
-        await db.upsert_game_profile(
-            message.from_user.id, game_data["name"], text, details[game_key].get("role", "")
-        )
-
-        # Следующая игра или дальше
-        selected = data.get("selected_games", [])
-        idx = data.get("current_game_idx", 0) + 1
-
-        if idx < len(selected):
-            next_game = selected[idx]
-            next_data = GAMES[next_game]
-            await state.update_data(current_game_idx=idx, current_game_key=next_game, current_detail_field="role")
-            buttons = [[KeyboardButton(text=r)] for r in next_data["roles"]]
-            buttons.append([KeyboardButton(text="⬅ Назад")])
+        # Проверяем, есть ли платформы у игры
+        platforms = game_data.get("platforms", [])
+        if platforms:
+            # Есть платформы — показываем выбор
+            await state.set_state(Form.platform)
+            await state.update_data(current_detail_field="platform", current_platform_idx=0)
+            platform = platforms[0]
+            buttons = []
+            if platform["options"]:
+                buttons = [[KeyboardButton(text=o)] for o in platform["options"]]
+                buttons.append([KeyboardButton(text="⬅ Пропустить")])
+            else:
+                buttons.append([KeyboardButton(text="⬅ Пропустить")])
             await message.answer(
-                f"✅ Ранг сохранён!\n\n"
-                f"🎯 Теперь <b>{next_data['name']}</b>\n"
-                "Выбери свою роль:",
+                f"✅ Ранг: <b>{text}</b>\n\n"
+                f"📊 Укажи свой <b>{platform['name']}</b> (или нажми «⬅ Пропустить»):",
                 parse_mode="HTML",
                 reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
             )
         else:
-            # Все игры пройдены — шаг 6: стиль игры
-            await state.set_state(Form.play_style)
-            await state.update_data(selected_styles=[])
-            buttons = [[KeyboardButton(text=s)] for s in PLAY_STYLES]
-            buttons.append([KeyboardButton(text="✅ Далее")])
-            buttons.append([KeyboardButton(text="⬅ Назад")])
-            await message.answer(
-                "🔥 <b>Шаг 6/8</b> · Как ты играешь?\n\n"
-                "Выбери до 3 стилей, потом «✅ Далее»:",
-                parse_mode="HTML",
-                reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
-            )
+            # Нет платформ — сохраняем сразу
+            await _save_game_and_advance(message, state, data, details, game_key)
+        return
+
+
+# ── Сохранение игры и переход к следующей ──
+
+async def _save_game_and_advance(message, state, data, details, game_key):
+    game_data = GAMES[game_key]
+    extra = details[game_key]
+    platform_value = extra.pop("platform_value", "")
+    platform_name = extra.pop("platform_name", "")
+    if platform_name and platform_value:
+        extra[platform_name] = platform_value
+
+    await db.upsert_game_profile(
+        message.from_user.id, game_data["name"], extra.get("rank", ""),
+        extra.get("role", ""), extra
+    )
+
+    selected = data.get("selected_games", [])
+    idx = data.get("current_game_idx", 0) + 1
+
+    if idx < len(selected):
+        next_game = selected[idx]
+        next_data = GAMES[next_game]
+        await state.set_state(Form.game_details)
+        await state.update_data(current_game_idx=idx, current_game_key=next_game, current_detail_field="role")
+        buttons = [[KeyboardButton(text=r)] for r in next_data["roles"]]
+        buttons.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer(
+            f"✅ Сохранено!\n\n"
+            f"🎯 Теперь <b>{next_data['name']}</b>\n"
+            "Выбери свою роль:",
+            parse_mode="HTML",
+            reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+        )
+    else:
+        # Все игры пройдены — стиль игры
+        await state.set_state(Form.play_style)
+        await state.update_data(selected_styles=[])
+        buttons = [[KeyboardButton(text=s)] for s in PLAY_STYLES]
+        buttons.append([KeyboardButton(text="✅ Далее")])
+        buttons.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer(
+            "🔥 <b>Шаг 6/8</b> · Как ты играешь?\n\n"
+            "Выбери до 3 стилей, потом «✅ Далее»:",
+            parse_mode="HTML",
+            reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+        )
+
+
+# ── Шаг 5b: Платформа (FaceIt и т.д.) ──
+
+@router.message(Form.platform)
+async def form_platform(message: Message, state: FSMContext):
+    text = message.text
+    data = await state.get_data()
+    game_key = data.get("current_game_key")
+    game_data = GAMES[game_key]
+    platforms = game_data.get("platforms", [])
+    platform_idx = data.get("current_platform_idx", 0)
+    details = data.get("game_details", {})
+
+    if text == "⬅ Назад":
+        # Назад к выбору ранга
+        await state.set_state(Form.game_details)
+        await state.update_data(current_detail_field="rank")
+        buttons = [[KeyboardButton(text=r)] for r in game_data["ranks"]]
+        buttons.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer("Назад к выбору ранга:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+        return
+
+    platform = platforms[platform_idx]
+
+    if text == "⬅ Пропустить":
+        # Пропускаем эту платформу
+        pass
+    else:
+        if platform["options"] and text not in platform["options"]:
+            await message.answer("❌ Выбери кнопкой или нажми «⬅ Пропустить»:")
+            return
+        details[game_key][f"platform_{platform_idx}"] = text
+
+    # Следующая платформа или сохраняем
+    next_idx = platform_idx + 1
+    if next_idx < len(platforms):
+        await state.update_data(current_platform_idx=next_idx)
+        next_platform = platforms[next_idx]
+        buttons = []
+        if next_platform["options"]:
+            buttons = [[KeyboardButton(text=o)] for o in next_platform["options"]]
+        buttons.append([KeyboardButton(text="⬅ Пропустить")])
+        buttons.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer(
+            f"📊 Укажи свой <b>{next_platform['name']}</b> (или «⬅ Пропустить»):",
+            parse_mode="HTML",
+            reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+        )
+    else:
+        # Все платформы пройдены — собираем extra и сохраняем
+        for i, p in enumerate(platforms):
+            key = f"platform_{i}"
+            if key in details[game_key]:
+                details[game_key]["platform_value"] = details[game_key].pop(key)
+                details[game_key]["platform_name"] = p["name"]
+        await state.update_data(game_details=details)
+        await state.set_state(Form.game_details)
+        await _save_game_and_advance(message, state, data, details, game_key)
 
 
 # ── Шаг 6: Стиль игры ──
@@ -530,7 +654,15 @@ async def form_bio(message: Message, state: FSMContext):
     games = await db.get_user_games(message.from_user.id)
     await state.clear()
 
-    games_text = ", ".join([f"{g['game_name']} ({g['rank']})" for g in games]) or "не указано"
+    games_lines = []
+    for g in games:
+        extra = json.loads(g.get("extra_fields", "{}") or "{}")
+        platform_str = ""
+        for k, v in extra.items():
+            if k.startswith("platform"):
+                platform_str += f" · {v}"
+        games_lines.append(f"{g['game_name']} ({g['rank']}){platform_str}")
+    games_text = ", ".join(games_lines) or "не указано"
     gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "🤔 Не указывать")
     mic_text = MIC_OPTIONS.get(user.get("mic_status", "no_mic"), "🔇 Нет микрофона")
 
@@ -631,6 +763,10 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
         lines = f"  🎯 {g['game_name']} · {g['rank']}"
         if g.get("role"):
             lines += f" · {g['role']}"
+        extra = json.loads(g.get("extra_fields", "{}") or "{}")
+        for k, v in extra.items():
+            if k.startswith("platform"):
+                lines += f"\n     📊 {v}"
         games_lines.append(lines)
     games_text = "\n".join(games_lines) if games_lines else "  не указано"
 
@@ -771,7 +907,15 @@ async def my_profile(message: Message):
 
     gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "")
     mic_text = MIC_OPTIONS.get(user.get("mic_status", "no_mic"), "")
-    games_text = ", ".join([f"{g['game_name']} ({g['rank']})" for g in games]) or "нет"
+    games_lines = []
+    for g in games:
+        extra = json.loads(g.get("extra_fields", "{}") or "{}")
+        plat = ""
+        for k, v in extra.items():
+            if k.startswith("platform"):
+                plat += f" · {v}"
+        games_lines.append(f"{g['game_name']} ({g['rank']}){plat}")
+    games_text = ", ".join(games_lines) or "нет"
 
     text = (
         f"👤 <b>Мой профиль</b>\n\n"
@@ -841,9 +985,8 @@ async def cb_rules(callback: CallbackQuery):
         "1. Будь вежлив с тиммейтами\n"
         "2. Не создавай фейковые анкеты\n"
         "3. Не спами в личных сообщениях\n"
-        "4. Не OMITNSWAM\n"
-        "5. Жалуйся на нарушителей — мы разберёмся\n\n"
-        "При 3+ жалобах — автоматический бан 🚫"
+        "4. Не спамь в поиске\n\n"
+        "Пользуйтесь ботом с удовольствием — мы всё делаем для вас! 🤝"
     )
     await callback.message.answer(text, parse_mode="HTML")
     await callback.answer()
