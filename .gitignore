@@ -1,0 +1,9 @@
+python:__pycache__/
+*.pyc
+.venv/
+.venv312/
+.env
+duoq.db
+bot.log
+bot_err.log
+*.egg-info/
