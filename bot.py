@@ -7,6 +7,7 @@ import asyncio
 import logging
 import json
 import os
+import html as html_mod
 from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher, F, Router
@@ -191,7 +192,7 @@ async def cmd_start(message: Message, state: FSMContext):
         )
     else:
         text = (
-            f"🎮 <b>С возвращением, {user['nickname']}!</b>\n\n"
+            f"🎮 <b>С возвращением, {html_mod.escape(user['nickname'])}!</b>\n\n"
             "Что хочешь сделать?"
         )
     await message.answer(text, reply_markup=main_kb(), parse_mode="HTML")
@@ -222,7 +223,7 @@ async def form_nickname(message: Message, state: FSMContext):
     buttons = [[KeyboardButton(text=ag)] for ag in AGE_GROUPS]
     buttons.append([KeyboardButton(text="⬅ Назад")])
     await message.answer(
-        f"✅ Ник+Имя: <b>{text}</b>\n\n"
+        f"✅ Ник+Имя: <b>{html_mod.escape(text)}</b>\n\n"
         "<b>Шаг 2/8</b> · Сколько тебе лет?",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
@@ -241,7 +242,7 @@ async def form_age(message: Message, state: FSMContext):
     buttons = [[KeyboardButton(text=v)] for v in GENDER_OPTIONS.values()]
     buttons.append([KeyboardButton(text="⬅ Назад")])
     await message.answer(
-        f"✅ Возраст: <b>{message.text}</b>\n\n"
+        f"✅ Возраст: <b>{html_mod.escape(message.text)}</b>\n\n"
         "<b>Шаг 3/8</b> · Пол:",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
@@ -670,7 +671,7 @@ async def form_bio(message: Message, state: FSMContext):
 
     await message.answer(
         f"🎉 <b>Анкета готова!</b>\n\n"
-        f"🎮 <b>{user['nickname']}</b>\n"
+        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>\n"
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
         f"🎤 {mic_text}\n"
@@ -776,7 +777,7 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
     bio_section = f"\n💬 <i>\"{bio_text[:200]}\"</i>" if bio_text else ""
 
     card = (
-        f"🎮 <b>{user['nickname']}</b>\n"
+        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>\n"
         f"📅 {user['age_group']} · {gender_text}\n\n"
         f"{games_text}\n\n"
         f"🎤 {mic_text}{bio_section}"
@@ -817,7 +818,7 @@ async def cb_like(callback: CallbackQuery, state: FSMContext):
         name = target["nickname"] if target else "Игрок"
         await callback.message.answer(
             f"🎉 <b>МАТЧ!</b>\n\n"
-            f"Вы и <b>{name}</b> оба хотят играть вместе!\n"
+             f"Вы и <b>{html_mod.escape(name)}</b> оба хотят играть вместе!\n"
             f"Напиши ему первым 👇",
             parse_mode="HTML",
         )
@@ -866,7 +867,7 @@ async def cb_fav(callback: CallbackQuery, state: FSMContext):
         name = target["nickname"] if target else "Игрок"
         await callback.message.answer(
             f"🎉 <b>МАТЧ!</b>\n\n"
-            f"Вы и <b>{name}</b> оба хотят играть вместе!\n"
+             f"Вы и <b>{html_mod.escape(name)}</b> оба хотят играть вместе!\n"
             f"Напиши ему первым 👇",
             parse_mode="HTML",
         )
@@ -921,7 +922,7 @@ async def my_profile(message: Message):
 
     text = (
         f"👤 <b>Мой профиль</b>\n\n"
-        f"🎮 <b>{user['nickname']}</b>\n"
+        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>\n"
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
         f"🎤 {mic_text}\n"
