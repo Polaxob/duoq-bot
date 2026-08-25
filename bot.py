@@ -157,7 +157,6 @@ MIC_OPTIONS = {"mic": "🎤 Микро есть", "listen": "🎧 Только �
 EXTRA_FIELD_LABELS = {
     "FaceIt": "🎯 FaceIt",
     "prime_status": "Прайм",
-    "premier_rating": "Премьер-рейтинг",
     "has_mmr": "MMR",
     "mmr": "MMR",
     "rust_premium": "Премиум",
@@ -188,7 +187,6 @@ def _format_extra_fields(extra: dict) -> list:
 GAME_RATING_QUESTIONS = {
     "cs2": [
         {"text": "У тебя есть Прайм статус в CS2?", "field": "prime_status", "type": "yesno"},
-        {"text": "Укажи Премьер-рейтинг (число, или «⬅ Пропустить»):", "field": "premier_rating", "type": "text"},
     ],
     "dota2": [
         {"text": "У тебя есть рейтинг (MMR) в Dota 2?", "field": "has_mmr", "type": "yesno"},
