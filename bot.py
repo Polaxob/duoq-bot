@@ -215,6 +215,10 @@ async def start_form(message: Message, state: FSMContext):
 
 @router.message(Form.nickname)
 async def form_nickname(message: Message, state: FSMContext):
+    if message.text == "⬅ Назад":
+        await state.clear()
+        await message.answer("🏠 В главное меню:", reply_markup=main_kb())
+        return
     text = message.text.strip()
     if len(text) < 2 or len(text) > 30:
         await message.answer("❌ Ник должен быть от 2 до 30 символов. Попробуй ещё раз:")
@@ -235,6 +239,16 @@ async def form_nickname(message: Message, state: FSMContext):
 
 @router.message(Form.age)
 async def form_age(message: Message, state: FSMContext):
+    if message.text == "⬅ Назад":
+        await state.set_state(Form.nickname)
+        await message.answer(
+            "📝 <b>Создание анкеты</b>\n\n"
+            "<b>Шаг 1/9</b> · Как тебя называют?\n"
+            "Какое у тебя имя + Никнейм (2–30 символов):",
+            parse_mode="HTML",
+            reply_markup=back_kb(),
+        )
+        return
     if message.text not in AGE_GROUPS:
         await message.answer("❌ Выбери возраст кнопкой:")
         return
@@ -255,6 +269,16 @@ async def form_age(message: Message, state: FSMContext):
 @router.message(Form.gender)
 async def form_gender(message: Message, state: FSMContext):
     text = message.text
+    if text == "⬅ Назад":
+        await state.set_state(Form.age)
+        data = await state.get_data()
+        buttons = [[KeyboardButton(text=ag)] for ag in AGE_GROUPS]
+        buttons.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer(
+            "Назад к выбору возраста:",
+            reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+        )
+        return
     if text not in GENDER_OPTIONS.values():
         await message.answer("❌ Выбери пол кнопкой:")
         return
