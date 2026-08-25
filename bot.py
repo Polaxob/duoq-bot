@@ -151,6 +151,7 @@ class Form(StatesGroup):
     platform = State()
     play_style = State()
     mic = State()
+    rating = State()
     bio = State()
     # Поиск
     search_game = State()
@@ -203,7 +204,7 @@ async def start_form(message: Message, state: FSMContext):
     await state.set_state(Form.nickname)
     await message.answer(
         "📝 <b>Создание анкеты</b>\n\n"
-        "<b>Шаг 1/8</b> · Как тебя называют?\n"
+        "<b>Шаг 1/9</b> · Как тебя называют?\n"
         "Какое у тебя имя + Никнейм (2–30 символов):",
         parse_mode="HTML",
         reply_markup=back_kb(),
@@ -224,7 +225,7 @@ async def form_nickname(message: Message, state: FSMContext):
     buttons.append([KeyboardButton(text="⬅ Назад")])
     await message.answer(
         f"✅ Ник+Имя: <b>{html_mod.escape(text)}</b>\n\n"
-        "<b>Шаг 2/8</b> · Сколько тебе лет?",
+        "<b>Шаг 2/9</b> · Сколько тебе лет?",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
     )
@@ -243,7 +244,7 @@ async def form_age(message: Message, state: FSMContext):
     buttons.append([KeyboardButton(text="⬅ Назад")])
     await message.answer(
         f"✅ Возраст: <b>{html_mod.escape(message.text)}</b>\n\n"
-        "<b>Шаг 3/8</b> · Пол:",
+        "<b>Шаг 3/9</b> · Пол:",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
     )
@@ -259,6 +260,16 @@ async def form_gender(message: Message, state: FSMContext):
         return
     gender = [k for k, v in GENDER_OPTIONS.items() if v == text][0]
     await state.update_data(gender=gender)
+
+    # Создаём пользователя в БД (nickname + age_group + gender собраны)
+    data = await state.get_data()
+    await db.create_user(
+        message.from_user.id,
+        nickname=data["nickname"],
+        age_group=data["age_group"],
+        gender=gender,
+    )
+
     await state.set_state(Form.games)
     kb = []
     for i in range(0, len(GAMES), 2):
@@ -269,7 +280,7 @@ async def form_gender(message: Message, state: FSMContext):
     kb.append([KeyboardButton(text="✅ Готово")])
     kb.append([KeyboardButton(text="⬅ Назад")])
     await message.answer(
-        "🎮 <b>Шаг 4/8</b> · Во что играешь?\n\n"
+        "🎮 <b>Шаг 4/9</b> · Во что играешь?\n\n"
         "Нажимай на игры, потом нажми «✅ Готово»:",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
@@ -302,7 +313,7 @@ async def form_games(message: Message, state: FSMContext):
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await state.set_state(Form.game_details)
         await message.answer(
-            f"🎯 <b>Шаг 5/8</b> · Детали по <b>{game_data['name']}</b>\n\n"
+            f"🎯 <b>Шаг 5/9</b> · Детали по <b>{game_data['name']}</b>\n\n"
             "Выбери свою роль:",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
@@ -465,7 +476,7 @@ async def _save_game_and_advance(message, state, data, details, game_key):
         buttons.append([KeyboardButton(text="✅ Далее")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
-            "🔥 <b>Шаг 6/8</b> · Как ты играешь?\n\n"
+            "🔥 <b>Шаг 6/9</b> · Как ты играешь?\n\n"
             "Выбери до 3 стилей, потом «✅ Далее»:",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
@@ -563,7 +574,7 @@ async def form_play_style(message: Message, state: FSMContext):
         buttons = [[KeyboardButton(text=v)] for v in MIC_OPTIONS.values()]
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
-            "🎤 <b>Шаг 7/8</b> · Готов voice-чатить?\n\n"
+            "🎤 <b>Шаг 7/9</b> · Готов voice-чатить?\n\n"
             "Выбери вариант:",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
@@ -618,11 +629,46 @@ async def form_mic(message: Message, state: FSMContext):
     mic = [k for k, v in MIC_OPTIONS.items() if v == text][0]
     await db.update_user(message.from_user.id, mic_status=mic)
 
-    # Шаг 8: О себе
-    await state.set_state(Form.bio)
+    # Шаг 8: Рейтинг / статус
+    await state.set_state(Form.rating)
     await message.answer(
         f"✅ Микро: <b>{text}</b>\n\n"
-        "📝 <b>Шаг 8/8</b> · Расскажи о себе (необязательно):\n\n"
+        "🏆 <b>Шаг 8/9</b> · Укажи свой рейтинг / статус (необязательно):\n\n"
+        "Премьер-рейтинг в CS2, MMR в Dota,\n"
+        "Премиум в Rust и т.д.\n\n"
+        "Напиши или нажми «✅ Далее» чтобы пропустить:",
+        parse_mode="HTML",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="✅ Далее")],
+                [KeyboardButton(text="⬅ Назад")],
+            ],
+            resize_keyboard=True,
+        ),
+    )
+
+
+# ── Шаг 8: Рейтинг / статус ──
+
+@router.message(Form.rating)
+async def form_rating(message: Message, state: FSMContext):
+    text = message.text
+
+    if text == "⬅ Назад":
+        await state.set_state(Form.mic)
+        buttons = [[KeyboardButton(text=v)] for v in MIC_OPTIONS.values()]
+        buttons.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer("Назад к микрофону:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+        return
+
+    rating = "" if text == "✅ Далее" else text[:100]
+    await db.update_user(message.from_user.id, rating=rating)
+
+    # Шаг 9: О себе
+    await state.set_state(Form.bio)
+    await message.answer(
+        f"✅ Рейтинг: <b>{html_mod.escape(rating) if rating else 'пропущено'}</b>\n\n"
+        "📝 <b>Шаг 9/9</b> · Расскажи о себе (необязательно):\n\n"
         "Чего ищешь в тиммейтах? Любимые мемы?\n"
         "Или нажми «✅ Сохранить» чтобы пропустить:",
         parse_mode="HTML",
@@ -636,17 +682,24 @@ async def form_mic(message: Message, state: FSMContext):
     )
 
 
-# ── Шаг 8: О себе ──
+# ── Шаг 9: О себе ──
 
 @router.message(Form.bio)
 async def form_bio(message: Message, state: FSMContext):
     text = message.text
 
     if text == "⬅ Назад":
-        await state.set_state(Form.mic)
-        buttons = [[KeyboardButton(text=v)] for v in MIC_OPTIONS.values()]
-        buttons.append([KeyboardButton(text="⬅ Назад")])
-        await message.answer("Назад к микрофону:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+        await state.set_state(Form.rating)
+        await message.answer(
+            "Назад к рейтингу:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text="✅ Далее")],
+                    [KeyboardButton(text="⬅ Назад")],
+                ],
+                resize_keyboard=True,
+            ),
+        )
         return
 
     bio = "" if text == "✅ Сохранить" else text[:500]
@@ -675,6 +728,7 @@ async def form_bio(message: Message, state: FSMContext):
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
         f"🎤 {mic_text}\n"
+        f"🏆 {user.get('rating', '') or 'не указано'}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
         "Теперь нажми «🔍 Найти тиммейтов» чтобы найти напарников!",
         parse_mode="HTML",
@@ -775,11 +829,14 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
 
     bio_text = user.get("bio", "")
     bio_section = f"\n💬 <i>\"{bio_text[:200]}\"</i>" if bio_text else ""
+    rating_text = user.get("rating", "")
+    rating_section = f"\n🏆 {rating_text}" if rating_text else ""
 
     card = (
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>\n"
         f"📅 {user['age_group']} · {gender_text}\n\n"
-        f"{games_text}\n\n"
+        f"{games_text}\n"
+        f"{rating_section}\n"
         f"🎤 {mic_text}{bio_section}"
     )
 
@@ -926,6 +983,7 @@ async def my_profile(message: Message):
         f"📅 {user['age_group']} · {gender_text}\n"
         f"🎯 {games_text}\n"
         f"🎤 {mic_text}\n"
+        f"🏆 {user.get('rating', '') or 'не указано'}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
         f"📊 Статистика:\n"
         f"  🎉 Матчей: <b>{len(matches)}</b>\n"
