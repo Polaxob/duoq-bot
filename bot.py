@@ -204,7 +204,7 @@ async def start_form(message: Message, state: FSMContext):
     await message.answer(
         "📝 <b>Создание анкеты</b>\n\n"
         "<b>Шаг 1/8</b> · Как тебя называют?\n"
-        "Напиши своё имя и ник (2–30 символов):",
+        "Какое у тебя имя + Никнейм (2–30 символов):",
         parse_mode="HTML",
         reply_markup=back_kb(),
     )
