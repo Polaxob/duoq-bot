@@ -1303,17 +1303,6 @@ async def cmd_reply(message: Message):
         await message.answer(f"❌ Не удалось отправить: {e}")
 
 
-# ── Команда /myid ──
-
-@router.message(Command("myid"))
-async def cmd_myid(message: Message):
-    await message.answer(
-        f"🆔 Твой Telegram ID: <code>{message.from_user.id}</code>\n"
-        f"👤 Username: @{message.from_user.username or 'нет'}",
-        parse_mode="HTML",
-    )
-
-
 # ── Настройки ──
 
 @router.message(F.text == "⚙️ Настройки")
