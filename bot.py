@@ -109,7 +109,7 @@ GAMES = {
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
         "roles": ["Выживание", "Креатив", "Моды", "Арена", "Спидран"],
         "platforms": [
-            {"name": "Hypixel", "options": ["Новичок", "Средний", "Опытный", "Профи"]},
+            {"name": "Лицензия Minecraft", "options": ["Есть", "Нет"], "question": "🏆 Есть ли у тебя лицензия Minecraft?"},
         ],
     },
     "gtav": {
@@ -597,9 +597,10 @@ async def form_game_details(message: Message, state: FSMContext):
             else:
                 buttons.append([KeyboardButton(text="🚫 Нет")])
                 buttons.append([KeyboardButton(text="⬅ Пропустить")])
+            platform_q = platform.get("question", f"📊 Укажи свой <b>{platform['name']}</b> (или нажми «⬅ Пропустить»):")
             await message.answer(
                 f"✅ Ранг: <b>{text}</b>\n\n"
-                f"📊 Укажи свой <b>{platform['name']}</b> (или нажми «⬅ Пропустить»):",
+                f"{platform_q}",
                 parse_mode="HTML",
                 reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
             )
@@ -700,8 +701,9 @@ async def form_platform(message: Message, state: FSMContext):
             buttons.append([KeyboardButton(text="🚫 Нет")])
         buttons.append([KeyboardButton(text="⬅ Пропустить")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
+        next_platform_q = next_platform.get("question", f"📊 Укажи свой <b>{next_platform['name']}</b> (или «⬅ Пропустить»):")
         await message.answer(
-            f"📊 Укажи свой <b>{next_platform['name']}</b> (или «⬅ Пропустить»):",
+            f"{next_platform_q}",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
         )
