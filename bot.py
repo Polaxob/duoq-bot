@@ -82,7 +82,7 @@ GAMES = {
         "name": "Rust",
         "icon": "🔧",
         "ranks": ["Новичок", "Средний", "Опытный", "Профи"],
-        "roles": ["Рейды и PvP", "Строительство", "Сбор ресурсов", "Ролеплей"],
+        "roles": ["Рейды и PvP", "Строительство", "Сбор ресурсов", "Электрик", "✏️ Написать свою"],
         "platforms": [],
     },
     "minecraft": {
@@ -510,6 +510,14 @@ async def form_game_details(message: Message, state: FSMContext):
         details[game_key] = {}
 
     if field == "role":
+        if text == "✏️ Написать свою":
+            await state.update_data(current_detail_field="custom_role")
+            buttons = [[KeyboardButton(text="⬅ Назад")]]
+            await message.answer(
+                "✏️ Напиши свою роль (до 30 символов):",
+                reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+            )
+            return
         if text not in game_data["roles"]:
             await message.answer("❌ Выбери роль кнопкой:")
             return
@@ -521,6 +529,31 @@ async def form_game_details(message: Message, state: FSMContext):
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
             f"✅ Роль: <b>{text}</b>\n\n"
+            "Выбери свой ранг:",
+            parse_mode="HTML",
+            reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+        )
+        return
+
+    if field == "custom_role":
+        if text == "⬅ Назад":
+            # Вернуться к выбору роли
+            buttons = [[KeyboardButton(text=r)] for r in game_data["roles"]]
+            buttons.append([KeyboardButton(text="⬅ Назад")])
+            await state.update_data(current_detail_field="role")
+            await message.answer("Назад к выбору роли:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+            return
+        if not text or len(text.strip()) < 2:
+            await message.answer("❌ Напиши роль длиннее 2 символов:")
+            return
+        custom = text.strip()[:30]
+        details[game_key]["role"] = custom
+        await state.update_data(game_details=details, current_detail_field="rank")
+        buttons = [[KeyboardButton(text=r)] for r in game_data["ranks"]]
+        buttons.append([KeyboardButton(text="🚫 Нет ранга")])
+        buttons.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer(
+            f"✅ Роль: <b>{html_mod.escape(custom)}</b>\n\n"
             "Выбери свой ранг:",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
