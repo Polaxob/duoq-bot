@@ -5,6 +5,7 @@ DuoQ — База данных (SQLite + aiosqlite)
 import aiosqlite
 import json
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "duoq.db"
@@ -239,6 +240,17 @@ async def get_user_favorites(user_id: int):
     return [r[0] for r in rows]
 
 
+async def remove_game_profile(user_id: int, game_name: str):
+    """Удалить профиль конкретной игры."""
+    db = await get_db()
+    await db.execute(
+        "DELETE FROM game_profiles WHERE user_id = ? AND game_name = ?",
+        (user_id, game_name),
+    )
+    await db.commit()
+    await db.close()
+
+
 async def get_seen_ids(user_id: int):
     db = await get_db()
     cursor = await db.execute(
@@ -248,3 +260,54 @@ async def get_seen_ids(user_id: int):
     rows = await cursor.fetchall()
     await db.close()
     return {r[0] for r in rows}
+
+
+# ---- Profile expiry (3 days) ----
+
+PROFILE_LIFETIME_DAYS = 3
+
+
+async def cleanup_expired_profiles():
+    """Удалить анкеты старше 3 дней."""
+    db = await get_db()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=PROFILE_LIFETIME_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
+    # Удалить game_profiles протухших пользователей
+    await db.execute(
+        """DELETE FROM game_profiles WHERE user_id IN
+           (SELECT telegram_id FROM users WHERE created_at < ?)""",
+        (cutoff,),
+    )
+    # Удалить сами анкеты
+    cursor = await db.execute(
+        "DELETE FROM users WHERE created_at < ? RETURNING telegram_id, nickname",
+    )
+    deleted = await cursor.fetchall()
+    await db.commit()
+    await db.close()
+    return [dict(r) for r in deleted]
+
+
+async def get_profile_expiry(telegram_id: int) -> dict:
+    """Получить дату создания и срок истечения анкеты."""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT created_at FROM users WHERE telegram_id = ?",
+        (telegram_id,),
+    )
+    row = await cursor.fetchone()
+    await db.close()
+    if not row:
+        return None
+    created = row[0]
+    if isinstance(created, str):
+        created = datetime.strptime(created, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    expires = created + timedelta(days=PROFILE_LIFETIME_DAYS)
+    now = datetime.now(timezone.utc)
+    days_left = max(0, (expires - now).days)
+    hours_left = max(0, int((expires - now).total_seconds() // 3600))
+    return {
+        "created_at": created,
+        "expires_at": expires,
+        "days_left": days_left,
+        "hours_left": hours_left,
+    }
