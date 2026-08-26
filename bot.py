@@ -245,6 +245,7 @@ def main_kb():
         keyboard=[
             [KeyboardButton(text="📋 Создать анкету"), KeyboardButton(text="🔍 Найти тиммейтов")],
             [KeyboardButton(text="👤 Мой профиль"), KeyboardButton(text="⚙️ Настройки")],
+            [KeyboardButton(text="💰 Поддержать автора")],
             [KeyboardButton(text="💬 Поддержка")],
         ],
         resize_keyboard=True,
@@ -2146,6 +2147,21 @@ async def form_edit_text(message: Message, state: FSMContext):
 
 
 # ── Поддержка ──
+
+@router.message(F.text == "💰 Поддержать автора")
+async def donate(message: Message):
+    await message.answer(
+        "💰 <b>Поддержать автора</b> 💰\n\n"
+        "Если тебе нравится бот, можешь поддержать разработку:\n\n"
+        "🟠 <b>USDC / ETH</b> (ERC-20):\n"
+        "<code>0x3DD92D71376f05e14dcEb05f8B499F3A868eC3d2</code>\n\n"
+        "🟡 <b>BTC</b>:\n"
+        "<code>bc1qu3w0wqcqlcpz0qlave4uv4ckpcd3ah5gfmklpe</code>\n\n"
+        "Спасибо за поддержку! 🙏",
+        parse_mode="HTML",
+        reply_markup=main_kb(),
+    )
+
 
 @router.message(F.text == "💬 Поддержка")
 async def support_start(message: Message, state: FSMContext):
