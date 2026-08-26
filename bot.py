@@ -564,6 +564,7 @@ async def form_game_details(message: Message, state: FSMContext):
     game_key = data.get("current_game_key")
     game_data = GAMES[game_key]
     details = data.get("game_details", {})
+    selected = data.get("selected_games", [])
     if game_key not in details:
         details[game_key] = {}
 
@@ -578,16 +579,29 @@ async def form_game_details(message: Message, state: FSMContext):
                 reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
             )
         elif field == "role":
-            # Назад к выбору игр
+            # Назад к предыдущему шагу
             if data.get("editing_games"):
                 # Режим редактирования — назад в меню редактирования
                 await state.set_state(Form.edit)
                 kb = _edit_menu_kb()
                 await message.answer("Назад к редактированию:", reply_markup=kb)
+            elif data.get("current_game_idx", 0) > 0:
+                # Мы на 2+ игре — вернуться к рангу предыдущей игры
+                prev_idx = data["current_game_idx"] - 1
+                prev_game_key = selected[prev_idx]
+                prev_game_data = GAMES[prev_game_key]
+                await state.update_data(current_game_idx=prev_idx, current_game_key=prev_game_key, current_detail_field="rank")
+                buttons = [[KeyboardButton(text=r)] for r in prev_game_data["ranks"]]
+                buttons.append([KeyboardButton(text="🚫 Нет ранга")])
+                buttons.append([KeyboardButton(text="⬅ Назад")])
+                await message.answer(
+                    f"Назад к <b>{prev_game_data['name']}</b> — выбери ранг:",
+                    parse_mode="HTML",
+                    reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+                )
             else:
                 await state.set_state(Form.games)
                 kb = []
-                selected = data.get("selected_games", [])
                 for i in range(0, len(GAMES), 2):
                     row = []
                     for gk in list(GAMES.keys())[i:i+2]:
