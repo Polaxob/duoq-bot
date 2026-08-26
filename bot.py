@@ -184,6 +184,7 @@ async def _show_game_rating_question(message, game_key, q_idx):
         ]
     else:
         kb = [
+            [KeyboardButton(text="🚫 Нет")],
             [KeyboardButton(text="⬅ Пропустить")],
             [KeyboardButton(text="⬅ Назад")],
         ]
@@ -242,6 +243,21 @@ def back_kb():
     )
 
 
+def _edit_menu_kb():
+    """Клавиатура меню редактирования профиля."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Никнейм", callback_data="edit_field:nickname"),
+         InlineKeyboardButton(text="✏️ Имя", callback_data="edit_field:name")],
+        [InlineKeyboardButton(text="📅 Возраст", callback_data="edit_field:age"),
+         InlineKeyboardButton(text="🧑 Пол", callback_data="edit_field:gender")],
+        [InlineKeyboardButton(text="🎮 Игры и роли", callback_data="edit_field:games")],
+        [InlineKeyboardButton(text="🔥 Стиль игры", callback_data="edit_field:play_style")],
+        [InlineKeyboardButton(text="🎤 Микрофон", callback_data="edit_field:mic")],
+        [InlineKeyboardButton(text="💬 О себе", callback_data="edit_field:bio")],
+        [InlineKeyboardButton(text="⬅ Назад к профилю", callback_data="back_to_profile")],
+    ])
+
+
 # ── /start ──
 
 @router.message(CommandStart())
@@ -285,7 +301,7 @@ async def form_nickname(message: Message, state: FSMContext):
         return
     text = message.text.strip()
     if len(text) < 2 or len(text) > 30:
-        await message.answer("❌ Никнейм должен быть от 2 до 30 символов. Попробуй ещё раз:")
+        await message.answer("❌ Никнейм должен быть от 2 до 30 символов. Попробуй ещё раз:", reply_markup=back_kb())
         return
     await state.update_data(nickname=text)
     # Переход к шагу 2: Имя
@@ -345,7 +361,11 @@ async def form_age(message: Message, state: FSMContext):
         )
         return
     if message.text not in AGE_GROUPS:
-        await message.answer("❌ Выбери возраст кнопкой:")
+        age_kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=ag)] for ag in AGE_GROUPS] + [[KeyboardButton(text="⬅ Назад")]],
+            resize_keyboard=True,
+        )
+        await message.answer("❌ Выбери возраст кнопкой:", reply_markup=age_kb)
         return
     await state.update_data(age_group=message.text)
     await state.set_state(Form.gender)
@@ -374,7 +394,11 @@ async def form_gender(message: Message, state: FSMContext):
         )
         return
     if text not in GENDER_OPTIONS.values():
-        await message.answer("❌ Выбери пол кнопкой:")
+        gender_kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=v)] for v in GENDER_OPTIONS.values()] + [[KeyboardButton(text="⬅ Назад")]],
+            resize_keyboard=True,
+        )
+        await message.answer("❌ Выбери пол кнопкой:", reply_markup=gender_kb)
         return
     gender = [k for k, v in GENDER_OPTIONS.items() if v == text][0]
     await state.update_data(gender=gender)
@@ -414,16 +438,55 @@ async def form_games(message: Message, state: FSMContext):
     selected = data.get("selected_games", [])
 
     if text == "⬅ Назад":
-        await state.set_state(Form.gender)
-        buttons = [[KeyboardButton(text=v)] for v in GENDER_OPTIONS.values()]
-        buttons.append([KeyboardButton(text="⬅ Назад")])
-        await message.answer("Назад к выбору пола:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+        if data.get("editing_games"):
+            # Режим редактирования — назад в меню редактирования
+            await state.set_state(Form.edit)
+            kb = _edit_menu_kb()
+            await message.answer("Назад к редактированию:", reply_markup=kb)
+        else:
+            await state.set_state(Form.gender)
+            buttons = [[KeyboardButton(text=v)] for v in GENDER_OPTIONS.values()]
+            buttons.append([KeyboardButton(text="⬅ Назад")])
+            await message.answer("Назад к выбору пола:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
         return
 
     if text == "✅ Готово":
         if not selected:
-            await message.answer("❌ Выбери хотя бы одну игру!")
+            games_kb = []
+            for i in range(0, len(GAMES), 2):
+                row = []
+                for gk in list(GAMES.keys())[i:i+2]:
+                    prefix = "✅ " if gk in selected else ""
+                    row.append(KeyboardButton(text=f"{prefix}{GAMES[gk]['icon']} {GAMES[gk]['name']}"))
+                games_kb.append(row)
+            games_kb.append([KeyboardButton(text="✅ Готово")])
+            games_kb.append([KeyboardButton(text="⬅ Назад")])
+            await message.answer(
+                "❌ Выбери хотя бы одну игру!",
+                reply_markup=ReplyKeyboardMarkup(keyboard=games_kb, resize_keyboard=True),
+            )
             return
+
+        if data.get("editing_games"):
+            # Режим редактирования — сохраняем изменения и возвращаемся в меню
+            user_games = await db.get_user_games(message.from_user.id)
+            existing_names = {g["game_name"] for g in user_games}
+            name_to_key = {gd["name"]: gk for gk, gd in GAMES.items()}
+            # Удаляем профили игр, которые больше не выбраны
+            for g in user_games:
+                gk = name_to_key.get(g["game_name"])
+                if gk and gk not in selected:
+                    await db.remove_game_profile(message.from_user.id, g["game_name"])
+            # Добавляем пустые профили для новых игр
+            for gk in selected:
+                game_name = GAMES[gk]["name"]
+                if game_name not in existing_names:
+                    await db.upsert_game_profile(message.from_user.id, game_name, "", "", {})
+            await state.set_state(Form.edit)
+            kb = _edit_menu_kb()
+            await message.answer("✅ Игры обновлены!", reply_markup=kb)
+            return
+
         # Переходим к деталям по первой игре
         await state.update_data(current_game_idx=0, game_details={})
         first_game = selected[0]
@@ -449,7 +512,19 @@ async def form_games(message: Message, state: FSMContext):
             break
 
     if game_key is None:
-        await message.answer("❌ Нажми на игру или «✅ Готово»:")
+        games_kb = []
+        for i in range(0, len(GAMES), 2):
+            row = []
+            for gk in list(GAMES.keys())[i:i+2]:
+                prefix = "✅ " if gk in selected else ""
+                row.append(KeyboardButton(text=f"{prefix}{GAMES[gk]['icon']} {GAMES[gk]['name']}"))
+            games_kb.append(row)
+        games_kb.append([KeyboardButton(text="✅ Готово")])
+        games_kb.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer(
+            "❌ Нажми на игру или «✅ Готово»:",
+            reply_markup=ReplyKeyboardMarkup(keyboard=games_kb, resize_keyboard=True),
+        )
         return
 
     if game_key in selected:
@@ -485,26 +560,58 @@ async def form_game_details(message: Message, state: FSMContext):
     text = message.text
     data = await state.get_data()
 
-    if text == "⬅ Назад":
-        await state.set_state(Form.games)
-        kb = []
-        selected = data.get("selected_games", [])
-        for i in range(0, len(GAMES), 2):
-            row = []
-            for gk in list(GAMES.keys())[i:i+2]:
-                prefix = "✅ " if gk in selected else ""
-                row.append(KeyboardButton(text=f"{prefix}{GAMES[gk]['icon']} {GAMES[gk]['name']}"))
-            kb.append(row)
-        kb.append([KeyboardButton(text="✅ Готово")])
-        await message.answer("Назад к выбору игр:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
-        return
-
     field = data.get("current_detail_field")
     game_key = data.get("current_game_key")
     game_data = GAMES[game_key]
     details = data.get("game_details", {})
     if game_key not in details:
         details[game_key] = {}
+
+    if text == "⬅ Назад":
+        if field in ("rank", "custom_role"):
+            # Назад к выбору роли для этой же игры
+            await state.update_data(current_detail_field="role")
+            buttons = [[KeyboardButton(text=r)] for r in game_data["roles"]]
+            buttons.append([KeyboardButton(text="⬅ Назад")])
+            await message.answer(
+                "Назад к выбору роли:",
+                reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
+            )
+        elif field == "role":
+            # Назад к выбору игр
+            if data.get("editing_games"):
+                # Режим редактирования — назад в меню редактирования
+                await state.set_state(Form.edit)
+                kb = _edit_menu_kb()
+                await message.answer("Назад к редактированию:", reply_markup=kb)
+            else:
+                await state.set_state(Form.games)
+                kb = []
+                selected = data.get("selected_games", [])
+                for i in range(0, len(GAMES), 2):
+                    row = []
+                    for gk in list(GAMES.keys())[i:i+2]:
+                        prefix = "✅ " if gk in selected else ""
+                        row.append(KeyboardButton(text=f"{prefix}{GAMES[gk]['icon']} {GAMES[gk]['name']}"))
+                    kb.append(row)
+                kb.append([KeyboardButton(text="✅ Готово")])
+                kb.append([KeyboardButton(text="⬅ Назад")])
+                await message.answer("Назад к выбору игр:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+        else:
+            # Другие случаи — назад к выбору игр
+            await state.set_state(Form.games)
+            kb = []
+            selected = data.get("selected_games", [])
+            for i in range(0, len(GAMES), 2):
+                row = []
+                for gk in list(GAMES.keys())[i:i+2]:
+                    prefix = "✅ " if gk in selected else ""
+                    row.append(KeyboardButton(text=f"{prefix}{GAMES[gk]['icon']} {GAMES[gk]['name']}"))
+                kb.append(row)
+            kb.append([KeyboardButton(text="✅ Готово")])
+            kb.append([KeyboardButton(text="⬅ Назад")])
+            await message.answer("Назад к выбору игр:", reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True))
+        return
 
     if field == "role":
         if text == "✏️ Написать свою":
@@ -516,7 +623,11 @@ async def form_game_details(message: Message, state: FSMContext):
             )
             return
         if text not in game_data["roles"]:
-            await message.answer("❌ Выбери роль кнопкой:")
+            role_kb = ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text=r)] for r in game_data["roles"]] + [[KeyboardButton(text="⬅ Назад")]],
+                resize_keyboard=True,
+            )
+            await message.answer("❌ Выбери роль кнопкой:", reply_markup=role_kb)
             return
         details[game_key]["role"] = text
         await state.update_data(game_details=details, current_detail_field="rank")
@@ -541,7 +652,10 @@ async def form_game_details(message: Message, state: FSMContext):
             await message.answer("Назад к выбору роли:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
             return
         if not text or len(text.strip()) < 2:
-            await message.answer("❌ Напиши роль длиннее 2 символов:")
+            await message.answer(
+                "❌ Напиши роль длиннее 2 символов:",
+                reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅ Назад")]], resize_keyboard=True),
+            )
             return
         custom = text.strip()[:30]
         details[game_key]["role"] = custom
@@ -559,7 +673,12 @@ async def form_game_details(message: Message, state: FSMContext):
 
     if field == "rank":
         if text not in game_data["ranks"] and text != "🚫 Нет ранга":
-            await message.answer("❌ Выбери ранг кнопкой:")
+            rank_kb = ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text=r)] for r in game_data["ranks"]]
+                + [[KeyboardButton(text="🚫 Нет ранга")], [KeyboardButton(text="⬅ Назад")]],
+                resize_keyboard=True,
+            )
+            await message.answer("❌ Выбери ранг кнопкой:", reply_markup=rank_kb)
             return
         details[game_key]["rank"] = "" if text == "🚫 Нет ранга" else text
         await state.update_data(game_details=details)
@@ -671,7 +790,16 @@ async def form_platform(message: Message, state: FSMContext):
         pass
     else:
         if platform["options"] and text not in platform["options"]:
-            await message.answer("❌ Выбери кнопкой или нажми «⬅ Пропустить»:")
+            pl_buttons = []
+            if platform["options"]:
+                pl_buttons = [[KeyboardButton(text=o)] for o in platform["options"]]
+                pl_buttons.append([KeyboardButton(text="🚫 Нет")])
+            pl_buttons.append([KeyboardButton(text="⬅ Пропустить")])
+            pl_buttons.append([KeyboardButton(text="⬅ Назад")])
+            await message.answer(
+                "❌ Выбери кнопкой или нажми «⬅ Пропустить»:",
+                reply_markup=ReplyKeyboardMarkup(keyboard=pl_buttons, resize_keyboard=True),
+            )
             return
         details[game_key][f"platform_{platform_idx}"] = text
 
@@ -771,6 +899,8 @@ async def form_game_rating(message: Message, state: FSMContext):
 
     if text == "⬅ Пропустить":
         value = ""
+    elif text == "🚫 Нет":
+        value = ""
     elif text == "✅ Есть":
         value = "Есть"
     elif text == "❌ Нет":
@@ -819,7 +949,20 @@ async def form_play_style(message: Message, state: FSMContext):
     if text == "✅ Далее":
         styles = data.get("selected_styles", [])
         if not styles:
-            await message.answer("❌ Выбери хотя бы один стиль!")
+            style_kb = []
+            for s in PLAY_STYLES:
+                prefix = "✅ " if s in styles else ""
+                style_kb.append([KeyboardButton(text=f"{prefix}{s}")])
+            for s in styles:
+                if s not in PLAY_STYLES:
+                    style_kb.append([KeyboardButton(text=f"✅ {s}")])
+            style_kb.append([KeyboardButton(text="✏️ Написать свой")])
+            style_kb.append([KeyboardButton(text="✅ Далее")])
+            style_kb.append([KeyboardButton(text="⬅ Назад")])
+            await message.answer(
+                "❌ Выбери хотя бы один стиль!",
+                reply_markup=ReplyKeyboardMarkup(keyboard=style_kb, resize_keyboard=True),
+            )
             return
         await db.update_user(message.from_user.id, play_style=json.dumps(styles))
         # Шаг 7: Микро и язык
@@ -850,7 +993,21 @@ async def form_play_style(message: Message, state: FSMContext):
     elif len(styles) < 3:
         styles.append(clean_text)
     else:
-        await message.answer("❌ Максимум 3 стиля!")
+        # Too many styles
+        max_kb = []
+        for s in PLAY_STYLES:
+            prefix = "✅ " if s in styles else ""
+            max_kb.append([KeyboardButton(text=f"{prefix}{s}")])
+        for s in styles:
+            if s not in PLAY_STYLES:
+                max_kb.append([KeyboardButton(text=f"✅ {s}")])
+        max_kb.append([KeyboardButton(text="✏️ Написать свой")])
+        max_kb.append([KeyboardButton(text="✅ Далее")])
+        max_kb.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer(
+            "❌ Максимум 3 стиля!",
+            reply_markup=ReplyKeyboardMarkup(keyboard=max_kb, resize_keyboard=True),
+        )
         return
 
     await state.update_data(selected_styles=styles)
@@ -898,12 +1055,24 @@ async def form_custom_style(message: Message, state: FSMContext):
         return
 
     if not text or len(text.strip()) < 2:
-        await message.answer("❌ Напиши стиль длиннее 2 символов:")
+        await message.answer(
+            "❌ Напиши стиль длиннее 2 символов:",
+            reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅ Назад")]], resize_keyboard=True),
+        )
         return
 
     custom = text.strip()[:30]
     data = await state.get_data()
     styles = data.get("selected_styles", [])
+
+    # Проверка на дубликат
+    if custom in styles:
+        await message.answer(
+            "❌ Этот стиль уже выбран!",
+            reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅ Назад")]], resize_keyboard=True),
+        )
+        return
+
     if len(styles) < 3:
         styles.append(custom)
     else:
@@ -940,16 +1109,33 @@ async def form_mic(message: Message, state: FSMContext):
     text = message.text
 
     if text == "⬅ Назад":
+        # Восстанавливаем стили из БД, чтобы не потерять
+        user = await db.get_user(message.from_user.id)
+        saved_styles = json.loads(user.get("play_style", "[]") or "[]") if user else []
         await state.set_state(Form.play_style)
-        await state.update_data(selected_styles=[])
-        buttons = [[KeyboardButton(text=s)] for s in PLAY_STYLES]
-        buttons.append([KeyboardButton(text="✅ Далее")])
-        buttons.append([KeyboardButton(text="⬅ Назад")])
-        await message.answer("Назад к стилям игры:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+        await state.update_data(selected_styles=saved_styles)
+        kb = []
+        for s in PLAY_STYLES:
+            prefix = "✅ " if s in saved_styles else ""
+            kb.append([KeyboardButton(text=f"{prefix}{s}")])
+        for s in saved_styles:
+            if s not in PLAY_STYLES:
+                kb.append([KeyboardButton(text=f"✅ {s}")])
+        kb.append([KeyboardButton(text="✏️ Написать свой")])
+        kb.append([KeyboardButton(text="✅ Далее")])
+        kb.append([KeyboardButton(text="⬅ Назад")])
+        await message.answer(
+            f"Назад к стилям игры (выбрано: {len(saved_styles)}/3):",
+            reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
+        )
         return
 
     if text not in MIC_OPTIONS.values():
-        await message.answer("❌ Выбери вариант кнопкой:")
+        mic_kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=v)] for v in MIC_OPTIONS.values()] + [[KeyboardButton(text="⬅ Назад")]],
+            resize_keyboard=True,
+        )
+        await message.answer("❌ Выбери вариант кнопкой:", reply_markup=mic_kb)
         return
 
     mic = [k for k, v in MIC_OPTIONS.items() if v == text][0]
@@ -1327,24 +1513,12 @@ async def cb_edit_profile(callback: CallbackQuery, state: FSMContext):
         await callback.answer("❌ Анкета не найдена", show_alert=True)
         return
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✏️ Никнейм", callback_data="edit_field:nickname"),
-         InlineKeyboardButton(text="✏️ Имя", callback_data="edit_field:name")],
-        [InlineKeyboardButton(text="📅 Возраст", callback_data="edit_field:age"),
-         InlineKeyboardButton(text="🧑 Пол", callback_data="edit_field:gender")],
-        [InlineKeyboardButton(text="🎮 Игры и роли", callback_data="edit_field:games")],
-        [InlineKeyboardButton(text="🔥 Стиль игры", callback_data="edit_field:play_style")],
-        [InlineKeyboardButton(text="🎤 Микрофон", callback_data="edit_field:mic")],
-        [InlineKeyboardButton(text="💬 О себе", callback_data="edit_field:bio")],
-        [InlineKeyboardButton(text="⬅ Назад к профилю", callback_data="back_to_profile")],
-    ])
-
     await state.set_state(Form.edit)
     await callback.message.answer(
         "✏️ <b>Редактирование профиля</b>\n\n"
         "Что хочешь изменить?",
         parse_mode="HTML",
-        reply_markup=kb,
+        reply_markup=_edit_menu_kb(),
     )
     await callback.answer()
 
@@ -1448,15 +1622,23 @@ async def cb_edit_field(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("🎤 Микрофон:", reply_markup=kb)
 
     elif field == "play_style":
+        # Загружаем текущие стили из БД
+        user = await db.get_user(callback.from_user.id)
+        saved_styles = json.loads(user.get("play_style", "[]") or "[]") if user else []
         await state.set_state(Form.edit)
-        await state.update_data(edit_styles=[])
+        await state.update_data(edit_styles=list(saved_styles))
         kb_buttons = []
         for s in PLAY_STYLES:
-            kb_buttons.append([InlineKeyboardButton(text=s, callback_data=f"edit_toggle_style:{s}")])
+            prefix = "✅ " if s in saved_styles else ""
+            kb_buttons.append([InlineKeyboardButton(text=f"{prefix}{s}", callback_data=f"edit_toggle_style:{s}")])
+        # Показать кастомные стили
+        for s in saved_styles:
+            if s not in PLAY_STYLES:
+                kb_buttons.append([InlineKeyboardButton(text=f"✅ {s}", callback_data=f"edit_toggle_style:{s}")])
         kb_buttons.append([InlineKeyboardButton(text="✅ Готово", callback_data="edit_save_style")])
         kb_buttons.append([InlineKeyboardButton(text="⬅ Отмена", callback_data="edit_cancel")])
         await callback.message.answer(
-            "🔥 Выбери стиль игры (до 3):",
+            f"🔥 Выбери стиль игры (выбрано: {len(saved_styles)}/3):",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=kb_buttons),
         )
 
@@ -1499,17 +1681,7 @@ async def cb_edit_save(callback: CallbackQuery, state: FSMContext):
         await db.update_user(callback.from_user.id, mic_status=value)
 
     # Вернуться к меню редактирования
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✏️ Никнейм", callback_data="edit_field:nickname"),
-         InlineKeyboardButton(text="✏️ Имя", callback_data="edit_field:name")],
-        [InlineKeyboardButton(text="📅 Возраст", callback_data="edit_field:age"),
-         InlineKeyboardButton(text="🧑 Пол", callback_data="edit_field:gender")],
-        [InlineKeyboardButton(text="🎮 Игры и роли", callback_data="edit_field:games")],
-        [InlineKeyboardButton(text="🔥 Стиль игры", callback_data="edit_field:play_style")],
-        [InlineKeyboardButton(text="🎤 Микрофон", callback_data="edit_field:mic")],
-        [InlineKeyboardButton(text="💬 О себе", callback_data="edit_field:bio")],
-        [InlineKeyboardButton(text="⬅ Назад к профилю", callback_data="back_to_profile")],
-    ])
+    kb = _edit_menu_kb()
     await state.set_state(Form.edit)
     await callback.message.answer("✏️ Что ещё изменить?", reply_markup=kb)
 
@@ -1538,6 +1710,10 @@ async def cb_edit_toggle_style(callback: CallbackQuery, state: FSMContext):
     for s in PLAY_STYLES:
         prefix = "✅ " if s in styles else ""
         kb_buttons.append([InlineKeyboardButton(text=f"{prefix}{s}", callback_data=f"edit_toggle_style:{s}")])
+    # Показать кастомные стили
+    for s in styles:
+        if s not in PLAY_STYLES:
+            kb_buttons.append([InlineKeyboardButton(text=f"✅ {s}", callback_data=f"edit_toggle_style:{s}")])
     kb_buttons.append([InlineKeyboardButton(text=f"✅ Готово ({len(styles)}/3)", callback_data="edit_save_style")])
     kb_buttons.append([InlineKeyboardButton(text="⬅ Отмена", callback_data="edit_cancel")])
     await callback.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=kb_buttons))
@@ -1555,19 +1731,18 @@ async def cb_edit_save_style(callback: CallbackQuery, state: FSMContext):
     await callback.answer("✅ Стиль сохранён!")
 
     # Вернуться к меню
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✏️ Никнейм", callback_data="edit_field:nickname"),
-         InlineKeyboardButton(text="✏️ Имя", callback_data="edit_field:name")],
-        [InlineKeyboardButton(text="📅 Возраст", callback_data="edit_field:age"),
-         InlineKeyboardButton(text="🧑 Пол", callback_data="edit_field:gender")],
-        [InlineKeyboardButton(text="🎮 Игры и роли", callback_data="edit_field:games")],
-        [InlineKeyboardButton(text="🔥 Стиль игры", callback_data="edit_field:play_style")],
-        [InlineKeyboardButton(text="🎤 Микрофон", callback_data="edit_field:mic")],
-        [InlineKeyboardButton(text="💬 О себе", callback_data="edit_field:bio")],
-        [InlineKeyboardButton(text="⬅ Назад к профилю", callback_data="back_to_profile")],
-    ])
+    kb = _edit_menu_kb()
     await state.set_state(Form.edit)
     await callback.message.answer("✏️ Что ещё изменить?", reply_markup=kb)
+
+
+@router.callback_query(F.data == "edit_cancel")
+async def cb_edit_cancel(callback: CallbackQuery, state: FSMContext):
+    """Отмена редактирования — вернуться к меню редактирования."""
+    kb = _edit_menu_kb()
+    await state.set_state(Form.edit)
+    await callback.message.answer("✏️ Отменено. Что ещё изменить?", reply_markup=kb)
+    await callback.answer()
 
 
 # ── Редактирование игр ──
@@ -1644,7 +1819,7 @@ async def cb_edit_toggle_games(callback: CallbackQuery, state: FSMContext):
             selected.append(name_to_key[g["game_name"]])
 
     await state.set_state(Form.games)
-    await state.update_data(selected_games=selected)
+    await state.update_data(selected_games=selected, editing_games=True)
     kb = []
     for i in range(0, len(GAMES), 2):
         row = []
@@ -1766,11 +1941,12 @@ async def cb_edit_game_val(callback: CallbackQuery, state: FSMContext):
     elif field == "rank":
         rank = "" if value == "🚫 Нет ранга" else value
     elif field == "platform":
-        # Find platform name
+        # Сохраняем только именованный ключ платформы (без дублей)
         platforms = GAMES[game_key].get("platforms", [])
         if platforms:
-            extra["platform_name"] = platforms[0]["name"]
-            extra["platform_value"] = value if value != "🚫 Нет" else ""
+            # Убираем старые служебные ключи
+            extra.pop("platform_name", None)
+            extra.pop("platform_value", None)
             extra[platforms[0]["name"]] = value if value != "🚫 Нет" else ""
 
     await db.upsert_game_profile(user_id, game_name, rank, role, extra)
@@ -1785,7 +1961,7 @@ async def cb_edit_game_val(callback: CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text=f"🏆 Ранг: {current_rank}", callback_data="edit_game_field:rank")],
     ])
     if GAMES[game_key].get("platforms"):
-        platform_val = extra.get("platform_value", "") or extra.get(GAMES[game_key]["platforms"][0]["name"], "") or "Не указано"
+        platform_val = extra.get(GAMES[game_key]["platforms"][0]["name"], "") or "Не указано"
         kb.inline_keyboard.append([InlineKeyboardButton(text=f"📊 Платформа: {platform_val}", callback_data="edit_game_field:platform")])
     if _has_rating_questions(game_key):
         rating_info = []
@@ -1830,17 +2006,7 @@ async def form_edit_text(message: Message, state: FSMContext):
 
     if text == "⬅ Отмена":
         # Вернуться к меню редактирования
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="✏️ Никнейм", callback_data="edit_field:nickname"),
-             InlineKeyboardButton(text="✏️ Имя", callback_data="edit_field:name")],
-            [InlineKeyboardButton(text="📅 Возраст", callback_data="edit_field:age"),
-             InlineKeyboardButton(text="🧑 Пол", callback_data="edit_field:gender")],
-            [InlineKeyboardButton(text="🎮 Игры и роли", callback_data="edit_field:games")],
-            [InlineKeyboardButton(text="🔥 Стиль игры", callback_data="edit_field:play_style")],
-            [InlineKeyboardButton(text="🎤 Микрофон", callback_data="edit_field:mic")],
-            [InlineKeyboardButton(text="💬 О себе", callback_data="edit_field:bio")],
-            [InlineKeyboardButton(text="⬅ Назад к профилю", callback_data="back_to_profile")],
-        ])
+        kb = _edit_menu_kb()
         await state.set_state(Form.edit)
         await message.answer("✏️ Отменено. Что ещё изменить?", reply_markup=kb)
         return
@@ -1903,17 +2069,7 @@ async def form_edit_text(message: Message, state: FSMContext):
         return
 
     # Return to edit menu
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✏️ Никнейм", callback_data="edit_field:nickname"),
-         InlineKeyboardButton(text="✏️ Имя", callback_data="edit_field:name")],
-        [InlineKeyboardButton(text="📅 Возраст", callback_data="edit_field:age"),
-         InlineKeyboardButton(text="🧑 Пол", callback_data="edit_field:gender")],
-        [InlineKeyboardButton(text="🎮 Игры и роли", callback_data="edit_field:games")],
-        [InlineKeyboardButton(text="🔥 Стиль игры", callback_data="edit_field:play_style")],
-        [InlineKeyboardButton(text="🎤 Микрофон", callback_data="edit_field:mic")],
-        [InlineKeyboardButton(text="💬 О себе", callback_data="edit_field:bio")],
-        [InlineKeyboardButton(text="⬅ Назад к профилю", callback_data="back_to_profile")],
-    ])
+    kb = _edit_menu_kb()
     await state.set_state(Form.edit)
     await message.answer("✅ Сохранено! Что ещё изменить?", reply_markup=kb)
 
@@ -2039,9 +2195,8 @@ async def cb_rules(callback: CallbackQuery):
 
 @router.message(F.text == "⬅ Назад")
 async def go_back_any(message: Message, state: FSMContext):
-    current = await state.get_state()
-    if current is None:
-        await message.answer("🏠 В главное меню:", reply_markup=main_kb())
+    await state.clear()
+    await message.answer("🏠 В главное меню:", reply_markup=main_kb())
 
 
 # ── Запуск ──
