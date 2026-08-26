@@ -1250,6 +1250,13 @@ async def form_bio(message: Message, state: FSMContext):
     games_text = "\n\n".join(games_lines) if games_lines else "не указано"
     gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "🤔 Не указывать")
     mic_text = MIC_OPTIONS.get(user.get("mic_status", "no_mic"), "🔇 Нет микрофона")
+    expiry = await db.get_profile_expiry(message.from_user.id)
+    if expiry and expiry["days_left"] > 0:
+        expiry_text = f"⏰ Анкета активна: <b>{expiry['days_left']} дн.</b>"
+    elif expiry:
+        expiry_text = f"⏰ Анкета истекает сегодня!"
+    else:
+        expiry_text = ""
 
     await message.answer(
         f"🎉 <b>Анкета готова!</b>\n\n"
@@ -1259,6 +1266,7 @@ async def form_bio(message: Message, state: FSMContext):
         f"{games_text}\n\n"
         f"{mic_text}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
+        f"{expiry_text}\n\n"
         "Теперь нажми «🔍 Найти тиммейтов» чтобы найти напарников!",
         parse_mode="HTML",
         reply_markup=main_kb(),
@@ -1532,6 +1540,13 @@ async def my_profile(message: Message):
             line += f"\n  {extra_str}"
         games_lines.append(line)
     games_text = "\n\n".join(games_lines) if games_lines else "не указано"
+    expiry = await db.get_profile_expiry(message.from_user.id)
+    if expiry and expiry["days_left"] > 0:
+        expiry_text = f"⏰ Осталось: <b>{expiry['days_left']} дн.</b>"
+    elif expiry:
+        expiry_text = "⏰ <b>Истекает сегодня!</b>"
+    else:
+        expiry_text = ""
 
     text = (
         f"👤 <b>Мой профиль</b>\n\n"
@@ -1541,6 +1556,7 @@ async def my_profile(message: Message):
         f"{games_text}\n\n"
         f"{mic_text}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
+        f"{expiry_text}\n"
         f"⭐ В избранном у: <b>{len(favorites)}</b>"
     )
 
@@ -1598,9 +1614,16 @@ async def cb_back_to_profile(callback: CallbackQuery, state: FSMContext):
         extra_str = " · ".join(extra_parts)
         line = f"{game_icon} {g['game_name']} · {rank_display}{role_str}"
         if extra_str:
-            line += f"\n{extra_str}"
+            line += f"\n  {extra_str}"
         games_lines.append(line)
-    games_text = "\n".join(games_lines) if games_lines else "не указано"
+    games_text = "\n\n".join(games_lines) if games_lines else "не указано"
+    expiry = await db.get_profile_expiry(callback.from_user.id)
+    if expiry and expiry["days_left"] > 0:
+        expiry_text = f"⏰ Осталось: <b>{expiry['days_left']} дн.</b>"
+    elif expiry:
+        expiry_text = "⏰ <b>Истекает сегодня!</b>"
+    else:
+        expiry_text = ""
 
     text = (
         f"👤 <b>Мой профиль</b>\n\n"
@@ -1610,6 +1633,7 @@ async def cb_back_to_profile(callback: CallbackQuery, state: FSMContext):
         f"{games_text}\n\n"
         f"{mic_text}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
+        f"{expiry_text}\n"
         f"⭐ В избранном у: <b>{len(favorites)}</b>"
     )
 
@@ -2257,8 +2281,46 @@ async def any_text(message: Message, state: FSMContext):
 
 # ── Запуск ──
 
+async def periodic_cleanup():
+    """Каждый час удалять протухшие анкеты (старше 3 дней)."""
+    while True:
+        await asyncio.sleep(3600)  # 1 час
+        try:
+            deleted = await db.cleanup_expired_profiles()
+            if deleted:
+                for u in deleted:
+                    try:
+                        await bot.send_message(
+                            u["telegram_id"],
+                            "⏰ <b>Твоя анкета истекла</b> (срок — 3 дня).\n\n"
+                            "Нажми «📋 Создать анкету» чтобы обновить!",
+                            parse_mode="HTML",
+                        )
+                    except Exception:
+                        pass
+                logging.info(f"Cleanup: удалено {len(deleted)} анкет")
+        except Exception as e:
+            logging.error(f"Cleanup error: {e}")
+
+
 async def main():
     await db.init_db()
+    # Удалить протухшие анкеты при запуске
+    deleted = await db.cleanup_expired_profiles()
+    if deleted:
+        logging.info(f"Startup cleanup: удалено {len(deleted)} анкет")
+        for u in deleted:
+            try:
+                await bot.send_message(
+                    u["telegram_id"],
+                    "⏰ <b>Твоя анкета истекла</b> (срок — 3 дня).\n\n"
+                    "Нажми «📋 Создать анкету» чтобы обновить!",
+                    parse_mode="HTML",
+                )
+            except Exception:
+                pass
+    # Запуск фоновой очистки
+    asyncio.create_task(periodic_cleanup())
     logging.info("DuoQ Bot запущен!")
     await dp.start_polling(bot)
 
