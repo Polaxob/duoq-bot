@@ -708,10 +708,8 @@ async def form_game_details(message: Message, state: FSMContext):
             if platform["options"]:
                 buttons = [[KeyboardButton(text=o)] for o in platform["options"]]
                 buttons.append([KeyboardButton(text="🚫 Нет")])
-                buttons.append([KeyboardButton(text="➡ Пропустить")])
-            else:
-                buttons.append([KeyboardButton(text="🚫 Нет")])
-                buttons.append([KeyboardButton(text="➡ Пропустить")])
+            buttons.append([KeyboardButton(text="➡ Пропустить")])
+            buttons.append([KeyboardButton(text="⬅ Назад")])
             platform_q = platform.get("question", f"📊 Укажи свой <b>{platform['name']}</b> (или нажми «➡ Пропустить»):")
             await message.answer(
                 f"✅ Ранг: <b>{text}</b>\n\n"
