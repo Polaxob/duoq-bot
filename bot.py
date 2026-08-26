@@ -2246,6 +2246,15 @@ async def go_back_any(message: Message, state: FSMContext):
     await message.answer("🏠 В главное меню:", reply_markup=main_kb())
 
 
+# ── Любой неизвестный текст — вернуть меню ──
+
+@router.message(F.text)
+async def any_text(message: Message, state: FSMContext):
+    current = await state.get_state()
+    if current is None:
+        await message.answer("🏠 Нажми на кнопку:", reply_markup=main_kb())
+
+
 # ── Запуск ──
 
 async def main():
