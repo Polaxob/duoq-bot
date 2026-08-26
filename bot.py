@@ -109,7 +109,6 @@ MIC_OPTIONS = {"mic": "🎤 Микро есть", "listen": "🎧 Только �
 EXTRA_FIELD_LABELS = {
     "FaceIt": "🎯FaceIt",
     "prime_status": "Прайм",
-    "has_mmr": "MMR",
     "mmr": "MMR",
     "rust_premium": "Премиум",
 }
@@ -141,7 +140,6 @@ GAME_RATING_QUESTIONS = {
         {"text": "У тебя есть Прайм статус в CS2?", "field": "prime_status", "type": "yesno"},
     ],
     "dota2": [
-        {"text": "У тебя есть рейтинг (MMR) в Dota 2?", "field": "has_mmr", "type": "yesno"},
         {"text": "Укажи свой MMR (число, или «⬅ Пропустить»):", "field": "mmr", "type": "text"},
     ],
     "rust": [
@@ -969,7 +967,15 @@ async def search_start(message: Message, state: FSMContext):
         await message.answer("❌ Сначала добавь игры в анкету!")
         return
 
-    kb = [[KeyboardButton(text=f"🎯 {g['game_name']}")] for g in games]
+    kb = []
+    for g in games:
+        # Find icon
+        icon = "🎮"
+        for gk, gd in GAMES.items():
+            if gd["name"] == g["game_name"]:
+                icon = gd["icon"]
+                break
+        kb.append([KeyboardButton(text=f"{icon} {g['game_name']}")])
     kb.append([KeyboardButton(text="🎯 Все мои игры")])
     kb.append([KeyboardButton(text="⬅ В меню")])
 
@@ -995,8 +1001,15 @@ async def search_select_game(message: Message, state: FSMContext):
     if text == "🎯 Все мои игры":
         game_filter = None
     else:
-        game_name = text.replace("🎯 ", "")
-        game_filter = game_name
+        # Match "icon GameName" format
+        game_filter = None
+        for gk, gd in GAMES.items():
+            if text == f"{gd['icon']} {gd['name']}":
+                game_filter = gd["name"]
+                break
+        if game_filter is None:
+            await message.answer("❌ Выбери игру кнопкой:")
+            return
 
     await state.clear()
 
@@ -1185,7 +1198,6 @@ async def my_profile(message: Message):
         return
 
     games = await db.get_user_games(message.from_user.id)
-    matches = await db.get_matches(message.from_user.id)
     favorites = await db.get_user_favorites(message.from_user.id)
 
     gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "")
@@ -1217,36 +1229,15 @@ async def my_profile(message: Message):
         f"🎯 {games_text}\n"
         f"{mic_text}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
-        f"📊 Статистика:\n"
-        f"  🎉 Матчей: <b>{len(matches)}</b>\n"
-        f"  ⭐ В избранном у: <b>{len(favorites)}</b>"
+        f"⭐ В избранном у: <b>{len(favorites)}</b>"
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✏️ Редактировать", callback_data="edit_profile")],
-        [InlineKeyboardButton(text="🎮 Мои матчи", callback_data="my_matches")],
     ])
 
     await message.answer(text, reply_markup=kb, parse_mode="HTML")
 
-
-@router.callback_query(F.data == "my_matches")
-async def cb_my_matches(callback: CallbackQuery):
-    matches = await db.get_matches(callback.from_user.id)
-    if not matches:
-        await callback.message.answer("😔 Пока нет матчей. Продолжай искать! 🔍")
-        await callback.answer()
-        return
-
-    text = "🎉 <b>Мои матчи:</b>\n\n"
-    for m in matches:
-        other_id = m["user_b_id"] if m["user_a_id"] == callback.from_user.id else m["user_a_id"]
-        other = await db.get_user(other_id)
-        if other:
-            text += f"🎮 {other['nickname']}\n"
-
-    await callback.message.answer(text, parse_mode="HTML")
-    await callback.answer()
 
 
 # ── Поддержка ──
