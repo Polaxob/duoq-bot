@@ -280,6 +280,7 @@ async def cleanup_expired_profiles():
     # Удалить сами анкеты
     cursor = await db.execute(
         "DELETE FROM users WHERE created_at < ? RETURNING telegram_id, nickname",
+        (cutoff,),
     )
     deleted = await cursor.fetchall()
     await db.commit()
