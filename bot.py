@@ -2181,7 +2181,7 @@ async def support_send(message: Message, state: FSMContext):
                 f"👤 User ID: <code>{message.from_user.id}</code>\n"
                 f"🆔 Никнейм: @{message.from_user.username or 'нет'}\n\n"
                 f"{html_mod.escape(text[:1000])}\n\n"
-                f"💬 Ответить: /reply {message.from_user.id} <текст>",
+                f"💬 Ответить: /reply {message.from_user.id} текст",
                 parse_mode="HTML",
             )
         except Exception as e:
