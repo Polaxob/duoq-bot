@@ -105,26 +105,41 @@ MIC_OPTIONS = {"mic": "🎤 Микро есть", "listen": "🎧 Только �
 # ── Перевод полей extra_fields для отображения ──
 
 EXTRA_FIELD_LABELS = {
-    "FaceIt": "🎯FaceIt",
-    "prime_status": "Прайм",
-    "mmr": "MMR",
-    "rust_premium": "Премиум",
-    "metro_royale": "Metro Royale",
+    "prime_status": "🔫 Прайм",
+    "mmr": "📊 MMR",
+    "rust_premium": "🔧 Премиум",
+    "metro_royale": "🕌 Metro Royale",
 }
 
-# Поля extra_fields, которые не показываем (уже отображаются отдельно)
+# Платформы — специальные лейблы для platform_name
+PLATFORM_LABELS = {
+    "FaceIt": "🎯 FaceIt",
+    "Лицензия Minecraft": "🏆 Лицензия",
+}
+
+# Поля extra_fields, которые не показываем (уже отображаются отдельно или не нужны)
 EXTRA_FIELD_SKIP = {"role", "rank"}
 
 
 def _format_extra_fields(extra: dict) -> list:
     """Форматировать extra_fields в читаемый список строк."""
     parts = []
+
+    # Платформа (например FaceIt, Лицензия Minecraft)
+    pname = extra.get("platform_name", "")
+    pval = extra.get("platform_value", "")
+    if pname and pval:
+        label = PLATFORM_LABELS.get(pname, f"📊 {pname}")
+        parts.append(f"{label}: {pval}")
+
     for k, v in extra.items():
         if not v or k in EXTRA_FIELD_SKIP:
             continue
+        if k in ("platform_name", "platform_value"):
+            continue  # уже обработано выше
         if k.startswith("platform"):
-            parts.append(f"📊 {v}")
-        elif k in EXTRA_FIELD_LABELS:
+            continue
+        if k in EXTRA_FIELD_LABELS:
             label = EXTRA_FIELD_LABELS[k]
             parts.append(f"{label}: {v}")
         else:
@@ -1230,9 +1245,9 @@ async def form_bio(message: Message, state: FSMContext):
         extra_str = " · ".join(extra_parts)
         line = f"{game_icon} {g['game_name']} · {rank_display}{role_str}"
         if extra_str:
-            line += f"\n{extra_str}"
+            line += f"\n  {extra_str}"
         games_lines.append(line)
-    games_text = "\n".join(games_lines) if games_lines else "не указано"
+    games_text = "\n\n".join(games_lines) if games_lines else "не указано"
     gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "🤔 Не указывать")
     mic_text = MIC_OPTIONS.get(user.get("mic_status", "no_mic"), "🔇 Нет микрофона")
 
@@ -1240,8 +1255,8 @@ async def form_bio(message: Message, state: FSMContext):
         f"🎉 <b>Анкета готова!</b>\n\n"
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
-        f"📅 {user['age_group']} · {gender_text}\n"
-        f"🎯 {games_text}\n"
+        f"📅 {user['age_group']} · {gender_text}\n\n"
+        f"{games_text}\n\n"
         f"{mic_text}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
         "Теперь нажми «🔍 Найти тиммейтов» чтобы найти напарников!",
@@ -1356,11 +1371,11 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
         rank_display = g.get("rank", "") or "Без ранга"
         extra = json.loads(g.get("extra_fields", "{}") or "{}")
         extra_parts = _format_extra_fields(extra)
-        lines = f"  {game_icon} {g['game_name']} · {rank_display}{role_str}"
+        lines = f"{game_icon} {g['game_name']} · {rank_display}{role_str}"
         if extra_parts:
-            lines += "\n" + " · ".join(extra_parts)
+            lines += "\n  " + " · ".join(extra_parts)
         games_lines.append(lines)
-    games_text = "\n".join(games_lines) if games_lines else "  не указано"
+    games_text = "\n\n".join(games_lines) if games_lines else "не указано"
 
     bio_text = user.get("bio", "")
     bio_section = f"\n💬 <i>\"{bio_text[:200]}\"</i>" if bio_text else ""
@@ -1369,7 +1384,7 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
         f"📅 {user['age_group']} · {gender_text}\n\n"
-        f"{games_text}\n"
+        f"{games_text}\n\n"
         f"{mic_text}{bio_section}"
     )
 
@@ -1514,16 +1529,16 @@ async def my_profile(message: Message):
         extra_str = " · ".join(extra_parts)
         line = f"{game_icon} {g['game_name']} · {rank_display}{role_str}"
         if extra_str:
-            line += f"\n{extra_str}"
+            line += f"\n  {extra_str}"
         games_lines.append(line)
-    games_text = "\n".join(games_lines) if games_lines else "не указано"
+    games_text = "\n\n".join(games_lines) if games_lines else "не указано"
 
     text = (
         f"👤 <b>Мой профиль</b>\n\n"
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
-        f"📅 {user['age_group']} · {gender_text}\n"
-        f"🎯 {games_text}\n"
+        f"📅 {user['age_group']} · {gender_text}\n\n"
+        f"{games_text}\n\n"
         f"{mic_text}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
         f"⭐ В избранном у: <b>{len(favorites)}</b>"
@@ -1591,8 +1606,8 @@ async def cb_back_to_profile(callback: CallbackQuery, state: FSMContext):
         f"👤 <b>Мой профиль</b>\n\n"
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
-        f"📅 {user['age_group']} · {gender_text}\n"
-        f"🎯 {games_text}\n"
+        f"📅 {user['age_group']} · {gender_text}\n\n"
+        f"{games_text}\n\n"
         f"{mic_text}\n"
         f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
         f"⭐ В избранном у: <b>{len(favorites)}</b>"
