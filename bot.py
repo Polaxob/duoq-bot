@@ -495,8 +495,8 @@ async def form_games(message: Message, state: FSMContext):
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await state.set_state(Form.game_details)
         await message.answer(
-            f"🎯 <b>Шаг 6/9</b> · Детали по <b>{game_data['name']}</b>\n\n"
-            "Выбери свою роль:",
+            f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+            f"🎯 <b>Шаг 6/9</b> · Выбери свою роль:",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
         )
@@ -632,7 +632,8 @@ async def form_game_details(message: Message, state: FSMContext):
             await state.update_data(current_detail_field="custom_role")
             buttons = [[KeyboardButton(text="⬅ Назад")]]
             await message.answer(
-                "✏️ Напиши свою роль (до 30 символов):",
+                f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+                f"✏️ Напиши свою роль (до 30 символов):",
                 reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
             )
             return
@@ -641,7 +642,9 @@ async def form_game_details(message: Message, state: FSMContext):
                 keyboard=[[KeyboardButton(text=r)] for r in game_data["roles"]] + [[KeyboardButton(text="⬅ Назад")]],
                 resize_keyboard=True,
             )
-            await message.answer("❌ Выбери роль кнопкой:", reply_markup=role_kb)
+            await message.answer(
+                f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+                f"❌ Выбери роль кнопкой:", reply_markup=role_kb)
             return
         details[game_key]["role"] = text
         await state.update_data(game_details=details, current_detail_field="rank")
@@ -650,6 +653,7 @@ async def form_game_details(message: Message, state: FSMContext):
         buttons.append([KeyboardButton(text="🚫 Нет ранга")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
+            f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
             f"✅ Роль: <b>{text}</b>\n\n"
             "Выбери свой ранг:",
             parse_mode="HTML",
@@ -663,11 +667,14 @@ async def form_game_details(message: Message, state: FSMContext):
             buttons = [[KeyboardButton(text=r)] for r in game_data["roles"]]
             buttons.append([KeyboardButton(text="⬅ Назад")])
             await state.update_data(current_detail_field="role")
-            await message.answer("Назад к выбору роли:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+            await message.answer(
+                f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+                f"Назад к выбору роли:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
             return
         if not text or len(text.strip()) < 2:
             await message.answer(
-                "❌ Напиши роль длиннее 2 символов:",
+                f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+                f"❌ Напиши роль длиннее 2 символов:",
                 reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅ Назад")]], resize_keyboard=True),
             )
             return
@@ -678,6 +685,7 @@ async def form_game_details(message: Message, state: FSMContext):
         buttons.append([KeyboardButton(text="🚫 Нет ранга")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
+            f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
             f"✅ Роль: <b>{html_mod.escape(custom)}</b>\n\n"
             "Выбери свой ранг:",
             parse_mode="HTML",
@@ -692,7 +700,9 @@ async def form_game_details(message: Message, state: FSMContext):
                 + [[KeyboardButton(text="🚫 Нет ранга")], [KeyboardButton(text="⬅ Назад")]],
                 resize_keyboard=True,
             )
-            await message.answer("❌ Выбери ранг кнопкой:", reply_markup=rank_kb)
+            await message.answer(
+                f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+                f"❌ Выбери ранг кнопкой:", reply_markup=rank_kb)
             return
         details[game_key]["rank"] = "" if text == "🚫 Нет ранга" else text
         await state.update_data(game_details=details)
@@ -712,6 +722,7 @@ async def form_game_details(message: Message, state: FSMContext):
             buttons.append([KeyboardButton(text="⬅ Назад")])
             platform_q = platform.get("question", f"📊 Укажи свой <b>{platform['name']}</b> (или нажми «➡ Пропустить»):")
             await message.answer(
+                f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
                 f"✅ Ранг: <b>{text}</b>\n\n"
                 f"{platform_q}",
                 parse_mode="HTML",
@@ -753,8 +764,8 @@ async def _save_game_and_advance(message, state, data, details, game_key):
         buttons.append([KeyboardButton(text="⬅ Назад")])
         await message.answer(
             f"✅ Сохранено!\n\n"
-            f"🎯 Теперь <b>{next_data['name']}</b>\n"
-            "Выбери свою роль:",
+            f"{next_data['icon']} <b>{next_data['name']}</b>\n\n"
+            f"🎯 Выбери свою роль:",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
         )
@@ -792,7 +803,10 @@ async def form_platform(message: Message, state: FSMContext):
         buttons = [[KeyboardButton(text=r)] for r in game_data["ranks"]]
         buttons.append([KeyboardButton(text="🚫 Нет ранга")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
-        await message.answer("Назад к выбору ранга:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+        await message.answer(
+            f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+            f"Назад к выбору ранга:",
+            reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
         return
 
     platform = platforms[platform_idx]
@@ -809,7 +823,8 @@ async def form_platform(message: Message, state: FSMContext):
             pl_buttons.append([KeyboardButton(text="➡ Пропустить")])
             pl_buttons.append([KeyboardButton(text="⬅ Назад")])
             await message.answer(
-                "❌ Выбери кнопкой или нажми «➡ Пропустить»:",
+                f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+                f"❌ Выбери кнопкой или нажми «➡ Пропустить»:",
                 reply_markup=ReplyKeyboardMarkup(keyboard=pl_buttons, resize_keyboard=True),
             )
             return
@@ -828,6 +843,7 @@ async def form_platform(message: Message, state: FSMContext):
         buttons.append([KeyboardButton(text="⬅ Назад")])
         next_platform_q = next_platform.get("question", f"📊 Укажи свой <b>{next_platform['name']}</b> (или «➡ Пропустить»):")
         await message.answer(
+            f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
             f"{next_platform_q}",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
@@ -891,7 +907,8 @@ async def form_game_rating(message: Message, state: FSMContext):
                 buttons.append([KeyboardButton(text="⬅ Назад")])
                 platform_q = platform.get("question", f"📊 Укажи свой <b>{platform['name']}</b> (или «➡ Пропустить»):")
                 await message.answer(
-                    "Назад к платформе:",
+                    f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+                    f"{platform_q}",
                     parse_mode="HTML",
                     reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
                 )
@@ -902,7 +919,10 @@ async def form_game_rating(message: Message, state: FSMContext):
                 buttons = [[KeyboardButton(text=r)] for r in game_data["ranks"]]
                 buttons.append([KeyboardButton(text="🚫 Нет ранга")])
                 buttons.append([KeyboardButton(text="⬅ Назад")])
-                await message.answer("Назад к выбору ранга:", reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
+                await message.answer(
+                    f"{game_data['icon']} <b>{game_data['name']}</b>\n\n"
+                    f"Назад к выбору ранга:",
+                    reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True))
         return
 
     # Сохраняем ответ
