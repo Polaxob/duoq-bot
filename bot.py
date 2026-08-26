@@ -70,9 +70,9 @@ GAMES = {
         "platforms": [],
     },
     "pubg": {
-        "name": "PUBG",
+        "name": "PUBG Mobile",
         "icon": "🪖",
-        "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Мастер"],
+        "ranks": ["Бронза", "Серебро", "Золото", "Платина", "Алмаз", "Корона", "Ас", "Ас-Мастер", "Ас-Доминатор", "Завоеватель"],
         "roles": ["Агрессивный", "Пассивный", "Универсал"],
         "platforms": [],
     },
@@ -109,6 +109,7 @@ EXTRA_FIELD_LABELS = {
     "prime_status": "Прайм",
     "mmr": "MMR",
     "rust_premium": "Премиум",
+    "metro_royale": "Metro Royale",
 }
 
 # Поля extra_fields, которые не показываем (уже отображаются отдельно)
@@ -142,6 +143,9 @@ GAME_RATING_QUESTIONS = {
     ],
     "rust": [
         {"text": "У тебя есть Премиум в Rust?", "field": "rust_premium", "type": "yesno"},
+    ],
+    "pubg": [
+        {"text": "🕌 Ты играешь в <b>Metro Royale</b>?", "field": "metro_royale", "type": "yesno"},
     ],
 }
 
