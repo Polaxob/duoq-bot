@@ -139,7 +139,7 @@ GAME_RATING_QUESTIONS = {
         {"text": "У тебя есть Прайм статус в CS2?", "field": "prime_status", "type": "yesno"},
     ],
     "dota2": [
-        {"text": "Укажи свой MMR (число, или «⬅ Пропустить»):", "field": "mmr", "type": "text"},
+        {"text": "Укажи свой MMR (число, или «➡ Пропустить»):", "field": "mmr", "type": "text"},
     ],
     "rust": [
         {"text": "У тебя есть Премиум в Rust?", "field": "rust_premium", "type": "yesno"},
@@ -179,13 +179,13 @@ async def _show_game_rating_question(message, game_key, q_idx):
     if q["type"] == "yesno":
         kb = [
             [KeyboardButton(text="✅ Есть"), KeyboardButton(text="❌ Нет")],
-            [KeyboardButton(text="⬅ Пропустить")],
+            [KeyboardButton(text="➡ Пропустить")],
             [KeyboardButton(text="⬅ Назад")],
         ]
     else:
         kb = [
             [KeyboardButton(text="🚫 Нет")],
-            [KeyboardButton(text="⬅ Пропустить")],
+            [KeyboardButton(text="➡ Пропустить")],
             [KeyboardButton(text="⬅ Назад")],
         ]
 
@@ -309,7 +309,7 @@ async def form_nickname(message: Message, state: FSMContext):
     buttons = [[KeyboardButton(text="⬅ Назад")]]
     await message.answer(
         f"✅ Никнейм: <b>{html_mod.escape(text)}</b>\n\n"
-        "<b>Шаг 2/9</b> · Какое у тебя имя? (или нажми «⬅ Пропустить»):",
+        "<b>Шаг 2/9</b> · Какое у тебя имя? (или нажми «➡ Пропустить»):",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
     )
@@ -330,7 +330,7 @@ async def form_name(message: Message, state: FSMContext):
             reply_markup=back_kb(),
         )
         return
-    if text == "⬅ Пропустить":
+    if text == "➡ Пропустить":
         name = ""
     else:
         name = text.strip()[:30]
@@ -355,7 +355,7 @@ async def form_age(message: Message, state: FSMContext):
         await state.set_state(Form.name)
         buttons = [[KeyboardButton(text="⬅ Назад")]]
         await message.answer(
-            "<b>Шаг 2/9</b> · Какое у тебя имя? (или нажми «⬅ Пропустить»):",
+            "<b>Шаг 2/9</b> · Какое у тебя имя? (или нажми «➡ Пропустить»):",
             parse_mode="HTML",
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
         )
@@ -694,11 +694,11 @@ async def form_game_details(message: Message, state: FSMContext):
             if platform["options"]:
                 buttons = [[KeyboardButton(text=o)] for o in platform["options"]]
                 buttons.append([KeyboardButton(text="🚫 Нет")])
-                buttons.append([KeyboardButton(text="⬅ Пропустить")])
+                buttons.append([KeyboardButton(text="➡ Пропустить")])
             else:
                 buttons.append([KeyboardButton(text="🚫 Нет")])
-                buttons.append([KeyboardButton(text="⬅ Пропустить")])
-            platform_q = platform.get("question", f"📊 Укажи свой <b>{platform['name']}</b> (или нажми «⬅ Пропустить»):")
+                buttons.append([KeyboardButton(text="➡ Пропустить")])
+            platform_q = platform.get("question", f"📊 Укажи свой <b>{platform['name']}</b> (или нажми «➡ Пропустить»):")
             await message.answer(
                 f"✅ Ранг: <b>{text}</b>\n\n"
                 f"{platform_q}",
@@ -785,7 +785,7 @@ async def form_platform(message: Message, state: FSMContext):
 
     platform = platforms[platform_idx]
 
-    if text == "⬅ Пропустить" or text == "🚫 Нет":
+    if text == "➡ Пропустить" or text == "🚫 Нет":
         # Пропускаем эту платформу
         pass
     else:
@@ -794,10 +794,10 @@ async def form_platform(message: Message, state: FSMContext):
             if platform["options"]:
                 pl_buttons = [[KeyboardButton(text=o)] for o in platform["options"]]
                 pl_buttons.append([KeyboardButton(text="🚫 Нет")])
-            pl_buttons.append([KeyboardButton(text="⬅ Пропустить")])
+            pl_buttons.append([KeyboardButton(text="➡ Пропустить")])
             pl_buttons.append([KeyboardButton(text="⬅ Назад")])
             await message.answer(
-                "❌ Выбери кнопкой или нажми «⬅ Пропустить»:",
+                "❌ Выбери кнопкой или нажми «➡ Пропустить»:",
                 reply_markup=ReplyKeyboardMarkup(keyboard=pl_buttons, resize_keyboard=True),
             )
             return
@@ -812,9 +812,9 @@ async def form_platform(message: Message, state: FSMContext):
         if next_platform["options"]:
             buttons = [[KeyboardButton(text=o)] for o in next_platform["options"]]
             buttons.append([KeyboardButton(text="🚫 Нет")])
-        buttons.append([KeyboardButton(text="⬅ Пропустить")])
+        buttons.append([KeyboardButton(text="➡ Пропустить")])
         buttons.append([KeyboardButton(text="⬅ Назад")])
-        next_platform_q = next_platform.get("question", f"📊 Укажи свой <b>{next_platform['name']}</b> (или «⬅ Пропустить»):")
+        next_platform_q = next_platform.get("question", f"📊 Укажи свой <b>{next_platform['name']}</b> (или «➡ Пропустить»):")
         await message.answer(
             f"{next_platform_q}",
             parse_mode="HTML",
@@ -875,9 +875,9 @@ async def form_game_rating(message: Message, state: FSMContext):
                 if platform["options"]:
                     buttons = [[KeyboardButton(text=o)] for o in platform["options"]]
                     buttons.append([KeyboardButton(text="🚫 Нет")])
-                buttons.append([KeyboardButton(text="⬅ Пропустить")])
+                buttons.append([KeyboardButton(text="➡ Пропустить")])
                 buttons.append([KeyboardButton(text="⬅ Назад")])
-                platform_q = platform.get("question", f"📊 Укажи свой <b>{platform['name']}</b> (или «⬅ Пропустить»):")
+                platform_q = platform.get("question", f"📊 Укажи свой <b>{platform['name']}</b> (или «➡ Пропустить»):")
                 await message.answer(
                     "Назад к платформе:",
                     parse_mode="HTML",
@@ -897,7 +897,7 @@ async def form_game_rating(message: Message, state: FSMContext):
     q = qs[idx]
     field = q["field"]
 
-    if text == "⬅ Пропустить":
+    if text == "➡ Пропустить":
         value = ""
     elif text == "🚫 Нет":
         value = ""
