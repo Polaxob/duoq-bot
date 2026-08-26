@@ -178,7 +178,7 @@ async def _show_game_rating_question(message, game_key, q_idx):
 
     if q["type"] == "yesno":
         kb = [
-            [KeyboardButton(text="✅ Есть"), KeyboardButton(text="❌ Нет")],
+            [KeyboardButton(text="✅ Да"), KeyboardButton(text="❌ Нет")],
             [KeyboardButton(text="➡ Пропустить")],
             [KeyboardButton(text="⬅ Назад")],
         ]
@@ -901,8 +901,8 @@ async def form_game_rating(message: Message, state: FSMContext):
         value = ""
     elif text == "🚫 Нет":
         value = ""
-    elif text == "✅ Есть":
-        value = "Есть"
+    elif text == "✅ Да":
+        value = "Да"
     elif text == "❌ Нет":
         value = "Нет"
     else:
