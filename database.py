@@ -78,6 +78,11 @@ async def init_db():
             FOREIGN KEY (reporter_id) REFERENCES users(telegram_id),
             FOREIGN KEY (reported_id) REFERENCES users(telegram_id)
         );
+
+        CREATE TABLE IF NOT EXISTS started_users (
+            telegram_id INTEGER PRIMARY KEY,
+            first_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     """)
     await db.commit()
     # Миграция: добавить play_style если нет
@@ -311,4 +316,64 @@ async def get_profile_expiry(telegram_id: int) -> dict:
         "expires_at": expires,
         "days_left": days_left,
         "hours_left": hours_left,
+    }
+
+
+# ---- Stats / admin ----
+
+async def record_start(telegram_id: int):
+    """Записать, что пользователь зашёл в бота (только первый раз)."""
+    db = await get_db()
+    await db.execute(
+        "INSERT OR IGNORE INTO started_users (telegram_id) VALUES (?)",
+        (telegram_id,),
+    )
+    await db.commit()
+    await db.close()
+
+
+async def get_stats() -> dict:
+    """Статистика для админа."""
+    db = await get_db()
+    cursor = await db.execute("SELECT COUNT(*) FROM started_users")
+    total_started = (await cursor.fetchone())[0]
+
+    cursor = await db.execute("SELECT COUNT(*) FROM users")
+    total_profiles = (await cursor.fetchone())[0]
+
+    cursor = await db.execute("SELECT COUNT(*) FROM users WHERE is_active = 1")
+    active_profiles = (await cursor.fetchone())[0]
+
+    cursor = await db.execute("SELECT COUNT(*) FROM matches")
+    total_matches = (await cursor.fetchone())[0]
+
+    # Анкеты за сегодня и за 7 дней
+    cursor = await db.execute(
+        "SELECT COUNT(*) FROM users WHERE date(created_at) = date('now')"
+    )
+    new_today = (await cursor.fetchone())[0]
+    cursor = await db.execute(
+        "SELECT COUNT(*) FROM users WHERE created_at >= datetime('now', '-7 days')"
+    )
+    new_7d = (await cursor.fetchone())[0]
+
+    # Разбивка по играм (активные)
+    cursor = await db.execute(
+        """SELECT gp.game_name, COUNT(DISTINCT gp.user_id) AS cnt
+           FROM game_profiles gp
+           JOIN users u ON u.telegram_id = gp.user_id AND u.is_active = 1
+           GROUP BY gp.game_name
+           ORDER BY cnt DESC"""
+    )
+    games = {r["game_name"]: r["cnt"] for r in await cursor.fetchall()}
+
+    await db.close()
+    return {
+        "total_started": total_started,
+        "total_profiles": total_profiles,
+        "active_profiles": active_profiles,
+        "total_matches": total_matches,
+        "new_today": new_today,
+        "new_7d": new_7d,
+        "games": games,
     }
