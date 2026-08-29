@@ -279,6 +279,7 @@ def _edit_menu_kb():
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
+    await db.record_start(message.from_user.id)
     user = await db.get_user(message.from_user.id)
     if not user:
         text = (
@@ -2240,6 +2241,41 @@ async def cmd_reply(message: Message):
         await message.answer(f"✅ Ответ отправлен пользователю {target_id}")
     except Exception as e:
         await message.answer(f"❌ Не удалось отправить: {e}")
+
+
+# ── Админ: статистика ──
+
+@router.message(Command("admin"))
+async def cmd_admin(message: Message):
+    """Команда для владельца: /admin — статистика бота."""
+    if OWNER_ID and message.from_user.id != OWNER_ID:
+        await message.answer("❌ У тебя нет прав.")
+        return
+
+    stats = await db.get_stats()
+
+    # Иконка игры по её человеческому имени
+    def _game_icon(game_name: str) -> str:
+        for g in GAMES.values():
+            if g["name"] == game_name:
+                return g["icon"]
+        return "🎮"
+
+    games_break = "\n".join(
+        f"  {_game_icon(name)} {name} — {cnt}" for name, cnt in stats["games"].items()
+    ) or "  пока нет активных анкет"
+
+    text = (
+        "📊 <b>Статистика DuoQ</b>\n\n"
+        f"👥 Зашло в бота: <b>{stats['total_started']}</b>\n"
+        f"📝 Сделали анкету: <b>{stats['total_profiles']}</b>\n"
+        f"🟢 Активных анкет: <b>{stats['active_profiles']}</b>\n"
+        f"❤️ Создано мэтчей: <b>{stats['total_matches']}</b>\n\n"
+        f"🆕 Новых анкет сегодня: <b>{stats['new_today']}</b>\n"
+        f"🆕 За 7 дней: <b>{stats['new_7d']}</b>\n\n"
+        f"🎮 По играм (активные):\n{games_break}"
+    )
+    await message.answer(text, parse_mode="HTML")
 
 
 # ── Настройки ──
