@@ -1468,7 +1468,12 @@ async def cb_like(callback: CallbackQuery, state: FSMContext):
         await state.update_data(current_idx=idx)
         await show_card(callback, state, candidates[idx], viewer_id)
     else:
-        await callback.message.answer("🔍 Анкеты закончились! Возвращайся позже 🎮", reply_markup=main_kb())
+        await callback.message.answer(
+            "✅ <b>Поставил 👍 Понравилось!</b>\n\n"
+            "Ты просмотрел все анкеты! Возвращайся позже, чтобы найти новых тиммейтов 🎮",
+            parse_mode="HTML",
+            reply_markup=main_kb(),
+        )
 
 
 @router.callback_query(F.data.startswith("skip:"))
@@ -1486,7 +1491,12 @@ async def cb_skip(callback: CallbackQuery, state: FSMContext):
         await state.update_data(current_idx=idx)
         await show_card(callback, state, candidates[idx], viewer_id)
     else:
-        await callback.message.answer("🔍 Анкеты закончились!", reply_markup=main_kb())
+        await callback.message.answer(
+            "✅ <b>Поставил 👎 Не понравилось!</b>\n\n"
+            "Ты просмотрел все анкеты! Возвращайся позже, чтобы найти новых тиммейтов 🎮",
+            parse_mode="HTML",
+            reply_markup=main_kb(),
+        )
 
 
 @router.callback_query(F.data.startswith("fav:"))
