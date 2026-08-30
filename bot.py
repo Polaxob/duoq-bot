@@ -1405,12 +1405,19 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
     bio_text = html_mod.escape(user.get("bio", "")[:200])
     bio_section = f"\n💬 <i>\"{bio_text}\"</i>" if bio_text else ""
 
+    # Статистика лайков/дизлайков этого тиммейта
+    try:
+        astats = await db.get_user_action_stats(candidate_id)
+        stats_line = f"\n👍 {astats['likes']} · 👎 {astats['dislikes']}"
+    except Exception:
+        stats_line = ""
+
     card = (
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
         f"📅 {html_mod.escape(user['age_group'])} · {gender_text}\n\n"
         f"{games_text}\n\n"
-        f"{mic_text}{bio_section}"
+        f"{mic_text}{bio_section}{stats_line}"
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -1545,12 +1552,13 @@ async def write_msg_send(message: Message, state: FSMContext):
         return
 
     if target_id:
+        username = message.from_user.username
+        user_line = f"@{html_mod.escape(username)}" if username else f"ID: <code>{message.from_user.id}</code>"
         try:
             await bot.send_message(
                 target_id,
-                f"💬 <b>Тебе пишет {html_mod.escape(sender_name)}!</b>\n\n"
-                f"{html_mod.escape(text[:1000])}\n\n"
-                f"🔧 Id: <code>{message.from_user.id}</code>",
+                f"💬 <b>Тебе пишет {html_mod.escape(sender_name)}</b> ({user_line})\n\n"
+                f"{html_mod.escape(text[:1000])}",
                 parse_mode="HTML",
             )
         except Exception as e:
@@ -1674,6 +1682,12 @@ async def my_profile(message: Message):
     except Exception as e:
         logging.error(f"get_profile_expiry error (my_profile): {e}")
 
+    try:
+        astats = await db.get_user_action_stats(message.from_user.id)
+        stats_line = f"👍 <b>{astats['likes']}</b> · 👎 <b>{astats['dislikes']}</b>"
+    except Exception:
+        stats_line = ""
+
     text = (
         f"👤 <b>Мой профиль</b>\n\n"
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
@@ -1683,7 +1697,8 @@ async def my_profile(message: Message):
         f"{mic_text}\n"
         f"💬 {html_mod.escape(user.get('bio', '')[:100]) or 'не указано'}\n\n"
         f"{expiry_text}\n"
-        f"⭐ В избранном у: <b>{len(favorites)}</b>"
+        f"⭐ В избранном у: <b>{len(favorites)}</b>\n"
+        f"Оценки анкеты: {stats_line}"
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
