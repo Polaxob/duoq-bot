@@ -229,6 +229,10 @@ class Form(StatesGroup):
     bio = State()
     # Поиск
     search_game = State()
+    # Написать сообщение тиммейту
+    write_msg = State()
+    # Пожаловаться на тиммейта
+    report_write = State()
     # Редактирование
     edit = State()
     edit_text = State()
@@ -1400,11 +1404,11 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="👎 Пропустить", callback_data=f"skip:{candidate_id}"),
-            InlineKeyboardButton(text="💬 Написать", callback_data=f"like:{candidate_id}"),
+            InlineKeyboardButton(text="👍 Понравилось", callback_data=f"like:{candidate_id}"),
+            InlineKeyboardButton(text="👎 Не понравилось", callback_data=f"skip:{candidate_id}"),
         ],
         [
-            InlineKeyboardButton(text="⭐ В избранное", callback_data=f"fav:{candidate_id}"),
+            InlineKeyboardButton(text="💬 Написать", callback_data=f"write:{candidate_id}"),
             InlineKeyboardButton(text="⚠️ Пожаловаться", callback_data=f"report:{candidate_id}"),
         ],
     ])
@@ -1423,7 +1427,7 @@ async def cb_like(callback: CallbackQuery, state: FSMContext):
     viewer_id = callback.from_user.id
 
     await db.save_action(viewer_id, target_id, "like")
-    await callback.answer("💬 Запрос отправлен! Если он тоже захочет — будет матч! 🎉")
+    await callback.answer("👍 Понравилось! Если ему тоже понравишься — будет матч! 🎉")
 
     # Проверяем взаимность
     mutual = await db.check_mutual_like(viewer_id, target_id)
@@ -1455,7 +1459,7 @@ async def cb_skip(callback: CallbackQuery, state: FSMContext):
     viewer_id = callback.from_user.id
 
     await db.save_action(viewer_id, target_id, "skip")
-    await callback.answer("Пропущено")
+    await callback.answer("👎 Не понравилось")
 
     data = await state.get_data()
     candidates = data.get("candidates", [])
@@ -1497,17 +1501,124 @@ async def cb_fav(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("🔍 Анкеты закончились!", reply_markup=main_kb())
 
 
-@router.callback_query(F.data.startswith("report:"))
-async def cb_report(callback: CallbackQuery):
+@router.callback_query(F.data.startswith("write:"))
+async def cb_write(callback: CallbackQuery, state: FSMContext):
     target_id = int(callback.data.split(":")[1])
-    db_conn = await db.get_db()
-    await db_conn.execute(
-        "INSERT INTO reports (reporter_id, reported_id, reason) VALUES (?, ?, ?)",
-        (callback.from_user.id, target_id, "user_report"),
+    await state.set_state(Form.write_msg)
+    await state.update_data(write_target=target_id)
+    await callback.message.answer(
+        "💬 <b>Написать тиммейту</b>\n\n"
+        "Напиши сообщение — оно будет отправлено пользователю.\n"
+        "Нажми «⬅ Отмена», чтобы выйти:",
+        parse_mode="HTML",
+        reply_markup=back_kb(),
     )
-    await db_conn.commit()
-    await db_conn.close()
-    await callback.answer("⚠️ Жалоба отправлена. Спасибо!")
+    await callback.answer()
+
+
+@router.message(Form.write_msg)
+async def write_msg_send(message: Message, state: FSMContext):
+    text = message.text
+    if text == "⬅ Назад":
+        await state.clear()
+        await message.answer("🏠 В главное меню:", reply_markup=main_kb())
+        return
+
+    data = await state.get_data()
+    target_id = data.get("write_target")
+    sender = await db.get_user(message.from_user.id)
+    sender_name = sender["nickname"] if sender else "Игрок"
+
+    if not text or len(text) < 2:
+        await message.answer("❌ Напиши сообщение длиннее 2 символов:")
+        return
+
+    if target_id:
+        try:
+            await bot.send_message(
+                target_id,
+                f"💬 <b>Тебе пишет {html_mod.escape(sender_name)}!</b>\n\n"
+                f"{html_mod.escape(text[:1000])}\n\n"
+                f"🔧 Id: <code>{message.from_user.id}</code>",
+                parse_mode="HTML",
+            )
+        except Exception as e:
+            logging.error(f"Не удалось отправить сообщение тиммейту {target_id}: {e}")
+            await message.answer("❌ Не удалось отправить сообщение (возможно, он заблокировал бота).", reply_markup=main_kb())
+            await state.clear()
+            return
+
+    await state.clear()
+    await message.answer(
+        "✅ <b>Сообщение отправлено!</b>",
+        parse_mode="HTML",
+        reply_markup=main_kb(),
+    )
+
+
+@router.callback_query(F.data.startswith("report:"))
+async def cb_report(callback: CallbackQuery, state: FSMContext):
+    target_id = int(callback.data.split(":")[1])
+    await state.set_state(Form.report_write)
+    await state.update_data(report_target=target_id)
+    await callback.message.answer(
+        "⚠️ <b>Пожаловаться</b>\n\n"
+        "Опиши причину жалобы — она будет отправлена разработчику.\n"
+        "Нажми «⬅ Отмена», чтобы выйти:",
+        parse_mode="HTML",
+        reply_markup=back_kb(),
+    )
+    await callback.answer()
+
+
+@router.message(Form.report_write)
+async def report_write_send(message: Message, state: FSMContext):
+    text = message.text
+    if text == "⬅ Назад":
+        await state.clear()
+        await message.answer("🏠 В главное меню:", reply_markup=main_kb())
+        return
+
+    if not text or len(text) < 2:
+        await message.answer("❌ Опиши причину жалобы (больше 2 символов):")
+        return
+
+    data = await state.get_data()
+    target_id = data.get("report_target")
+
+    # Сохранить жалобу в БД
+    try:
+        db_conn = await db.get_db()
+        await db_conn.execute(
+            "INSERT INTO reports (reporter_id, reported_id, reason) VALUES (?, ?, ?)",
+            (message.from_user.id, target_id, html_mod.escape(text[:1000])),
+        )
+        await db_conn.commit()
+        await db_conn.close()
+    except Exception as e:
+        logging.error(f"Не удалось сохранить жалобу: {e}")
+
+    # Переслать владельцу
+    if OWNER_ID:
+        try:
+            await bot.send_message(
+                OWNER_ID,
+                f"⚠️ <b>Жалоба в DuoQ</b>\n"
+                f"👤 От: ID <code>{message.from_user.id}</code> (@{message.from_user.username or 'нет'})\n"
+                f"🎯 На: ID <code>{target_id}</code>\n\n"
+                f"Причина: {html_mod.escape(text[:1000])}",
+                parse_mode="HTML",
+            )
+        except Exception as e:
+            logging.error(f"Не удалось отправить жалобу владельцу: {e}")
+
+    await state.clear()
+    await message.answer(
+        "✅ <b>Жалоба отправлена!</b>\n\n"
+        "Разработчик рассмотрит её.",
+        parse_mode="HTML",
+        reply_markup=main_kb(),
+    )
 
 
 # ── Мой профиль ──
