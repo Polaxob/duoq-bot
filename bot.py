@@ -1392,23 +1392,23 @@ async def show_card(message_or_cb, state, candidate_id: int, viewer_id: int):
             if gd["name"] == g["game_name"]:
                 game_icon = gd["icon"]
                 break
-        role_str = f" · {g['role']}" if g.get("role") else ""
-        rank_display = g.get("rank", "") or "Без ранга"
+        role_str = f" · {html_mod.escape(g['role'])}" if g.get("role") else ""
+        rank_display = html_mod.escape(g.get("rank", "") or "Без ранга")
         extra = json.loads(g.get("extra_fields", "{}") or "{}")
-        extra_parts = _format_extra_fields(extra)
-        lines = f"{game_icon} {g['game_name']} · {rank_display}{role_str}"
+        extra_parts = [html_mod.escape(p) for p in _format_extra_fields(extra)]
+        lines = f"{game_icon} {html_mod.escape(g['game_name'])} · {rank_display}{role_str}"
         if extra_parts:
             lines += "\n  " + " · ".join(extra_parts)
         games_lines.append(lines)
     games_text = "\n\n".join(games_lines) if games_lines else "не указано"
 
-    bio_text = user.get("bio", "")
-    bio_section = f"\n💬 <i>\"{bio_text[:200]}\"</i>" if bio_text else ""
+    bio_text = html_mod.escape(user.get("bio", "")[:200])
+    bio_section = f"\n💬 <i>\"{bio_text}\"</i>" if bio_text else ""
 
     card = (
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
-        f"📅 {user['age_group']} · {gender_text}\n\n"
+        f"📅 {html_mod.escape(user['age_group'])} · {gender_text}\n\n"
         f"{games_text}\n\n"
         f"{mic_text}{bio_section}"
     )
@@ -1649,37 +1649,39 @@ async def my_profile(message: Message):
     games_lines = []
     for g in games:
         extra = json.loads(g.get("extra_fields", "{}") or "{}")
-        extra_parts = _format_extra_fields(extra)
+        extra_parts = [html_mod.escape(p) for p in _format_extra_fields(extra)]
         # Найти иконку игры
         game_icon = "🎮"
         for gk, gd in GAMES.items():
             if gd["name"] == g["game_name"]:
                 game_icon = gd["icon"]
                 break
-        role_str = f" · {g['role']}" if g.get("role") else ""
-        rank_display = g.get("rank", "") or "Без ранга"
+        role_str = f" · {html_mod.escape(g['role'])}" if g.get("role") else ""
+        rank_display = html_mod.escape(g.get("rank", "") or "Без ранга")
         extra_str = " · ".join(extra_parts)
-        line = f"{game_icon} {g['game_name']} · {rank_display}{role_str}"
+        line = f"{game_icon} {html_mod.escape(g['game_name'])} · {rank_display}{role_str}"
         if extra_str:
             line += f"\n  {extra_str}"
         games_lines.append(line)
     games_text = "\n\n".join(games_lines) if games_lines else "не указано"
-    expiry = await db.get_profile_expiry(message.from_user.id)
-    if expiry and expiry["days_left"] > 0:
-        expiry_text = f"⏰ Осталось: <b>{expiry['days_left']} дн.</b>"
-    elif expiry:
-        expiry_text = "⏰ <b>Истекает сегодня!</b>"
-    else:
-        expiry_text = ""
+    expiry_text = ""
+    try:
+        expiry = await db.get_profile_expiry(message.from_user.id)
+        if expiry and expiry["days_left"] > 0:
+            expiry_text = f"⏰ Осталось: <b>{expiry['days_left']} дн.</b>"
+        elif expiry:
+            expiry_text = "⏰ <b>Истекает сегодня!</b>"
+    except Exception as e:
+        logging.error(f"get_profile_expiry error (my_profile): {e}")
 
     text = (
         f"👤 <b>Мой профиль</b>\n\n"
         f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
         f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
-        f"📅 {user['age_group']} · {gender_text}\n\n"
+        f"📅 {html_mod.escape(user['age_group'])} · {gender_text}\n\n"
         f"{games_text}\n\n"
         f"{mic_text}\n"
-        f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
+        f"💬 {html_mod.escape(user.get('bio', '')[:100]) or 'не указано'}\n\n"
         f"{expiry_text}\n"
         f"⭐ В избранном у: <b>{len(favorites)}</b>"
     )
