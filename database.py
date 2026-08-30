@@ -245,6 +245,24 @@ async def get_user_favorites(user_id: int):
     return [r[0] for r in rows]
 
 
+async def get_user_action_stats(user_id: int) -> dict:
+    """Сколько раз пользователю поставили «Понравилось» и «Не понравилось»."""
+    db = await get_db()
+    likes = 0
+    dislikes = 0
+    cursor = await db.execute(
+        "SELECT action, COUNT(*) AS cnt FROM actions WHERE to_user_id = ? GROUP BY action",
+        (user_id,),
+    )
+    for r in await cursor.fetchall():
+        if r["action"] in ("like", "fav"):
+            likes += r["cnt"]
+        elif r["action"] == "skip":
+            dislikes += r["cnt"]
+    await db.close()
+    return {"likes": likes, "dislikes": dislikes}
+
+
 async def remove_game_profile(user_id: int, game_name: str):
     """Удалить профиль конкретной игры."""
     db = await get_db()
