@@ -1231,52 +1231,63 @@ async def form_bio(message: Message, state: FSMContext):
     bio = "" if text == "✅ Сохранить" else text[:500]
     await db.update_user(message.from_user.id, bio=bio)
 
-    # Завершение анкеты
+    # Завершение анкеты — оборачиваем в try/except, чтобы бот ВСЕГДА отвечал,
+    # даже если сборка превью упадёт (тогда анкета всё равно считается сохранённой).
     user = await db.get_user(message.from_user.id)
     games = await db.get_user_games(message.from_user.id)
     await state.clear()
 
-    games_lines = []
-    for g in games:
-        extra = json.loads(g.get("extra_fields", "{}") or "{}")
-        extra_parts = _format_extra_fields(extra)
-        # Найти иконку игры
-        game_icon = "🎮"
-        for gk, gd in GAMES.items():
-            if gd["name"] == g["game_name"]:
-                game_icon = gd["icon"]
-                break
-        role_str = f" · {g['role']}" if g.get("role") else ""
-        rank_display = g.get("rank", "") or "Без ранга"
-        extra_str = " · ".join(extra_parts)
-        line = f"{game_icon} {g['game_name']} · {rank_display}{role_str}"
-        if extra_str:
-            line += f"\n  {extra_str}"
-        games_lines.append(line)
-    games_text = "\n\n".join(games_lines) if games_lines else "не указано"
-    gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "🤔 Не указывать")
-    mic_text = MIC_OPTIONS.get(user.get("mic_status", "no_mic"), "🔇 Нет микрофона")
-    expiry = await db.get_profile_expiry(message.from_user.id)
-    if expiry and expiry["days_left"] > 0:
-        expiry_text = f"⏰ Анкета активна: <b>{expiry['days_left']} дн.</b>"
-    elif expiry:
-        expiry_text = f"⏰ Анкета истекает сегодня!"
-    else:
+    try:
+        games_lines = []
+        for g in games:
+            extra = json.loads(g.get("extra_fields", "{}") or "{}")
+            extra_parts = _format_extra_fields(extra)
+            # Найти иконку игры
+            game_icon = "🎮"
+            for gk, gd in GAMES.items():
+                if gd["name"] == g["game_name"]:
+                    game_icon = gd["icon"]
+                    break
+            role_str = f" · {g['role']}" if g.get("role") else ""
+            rank_display = g.get("rank", "") or "Без ранга"
+            extra_str = " · ".join(extra_parts)
+            line = f"{game_icon} {g['game_name']} · {rank_display}{role_str}"
+            if extra_str:
+                line += f"\n  {extra_str}"
+            games_lines.append(line)
+        games_text = "\n\n".join(games_lines) if games_lines else "не указано"
+        gender_text = GENDER_OPTIONS.get(user.get("gender", "hidden"), "🤔 Не указывать")
+        mic_text = MIC_OPTIONS.get(user.get("mic_status", "no_mic"), "🔇 Нет микрофона")
         expiry_text = ""
+        try:
+            expiry = await db.get_profile_expiry(message.from_user.id)
+            if expiry and expiry["days_left"] > 0:
+                expiry_text = f"⏰ Анкета активна: <b>{expiry['days_left']} дн.</b>"
+            elif expiry:
+                expiry_text = f"⏰ Анкета истекает сегодня!"
+        except Exception as e:
+            logging.error(f"get_profile_expiry error: {e}")
 
-    await message.answer(
-        f"🎉 <b>Анкета готова!</b>\n\n"
-        f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
-        f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
-        f"📅 {user['age_group']} · {gender_text}\n\n"
-        f"{games_text}\n\n"
-        f"{mic_text}\n"
-        f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
-        f"{expiry_text}\n\n"
-        "Теперь нажми «🔍 Найти тиммейтов» чтобы найти напарников!",
-        parse_mode="HTML",
-        reply_markup=main_kb(),
-    )
+        preview = (
+            f"🎉 <b>Анкета готова!</b>\n\n"
+            f"🎮 <b>{html_mod.escape(user['nickname'])}</b>"
+            f"{(' · ' + html_mod.escape(user['name'])) if user.get('name') else ''}\n"
+            f"📅 {user['age_group']} · {gender_text}\n\n"
+            f"{games_text}\n\n"
+            f"{mic_text}\n"
+            f"💬 {user.get('bio', '')[:100] or 'не указано'}\n\n"
+            f"{expiry_text}\n\n"
+            "Теперь нажми «🔍 Найти тиммейтов» чтобы найти напарников!"
+        )
+    except Exception as e:
+        logging.error(f"Ошибка при формировании превью анкеты: {e}")
+        preview = (
+            f"🎉 <b>Анкета готова!</b>\n\n"
+            "Твоя анкета сохранена!\n\n"
+            "Теперь нажми «🔍 Найти тиммейтов» чтобы найти напарников!"
+        )
+
+    await message.answer(preview, parse_mode="HTML", reply_markup=main_kb())
 
 
 # ── Найти тиммейтов ──
